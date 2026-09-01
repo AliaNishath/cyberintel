@@ -2295,6 +2295,14 @@ function UrlScannerPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Scan failed");
       setResult(data);
+
+      if (data.verdict === "malicious" || data.verdict === "suspicious") {
+        playAlertSiren();
+        if (typeof window !== "undefined" && window.__triggerThreatFlash) {
+          window.__triggerThreatFlash();
+        }
+      }
+
       if (data.threatCreated) loadHistory();
     } catch (err) {
       setError(err.message);
@@ -2342,24 +2350,65 @@ function UrlScannerPage() {
         {error && <p className="muted" style={{ color: "#ff8fc0", marginTop: 10 }}>{error}</p>}
 
         {result && (
-          <div className="scan-result" style={{ borderColor: verdictStyle[result.verdict].color }}>
-            <div className="scan-result-head">
-              {React.createElement(verdictStyle[result.verdict].icon, { size: 20, color: verdictStyle[result.verdict].color })}
-              <div>
-                <div style={{ fontWeight: 700, color: verdictStyle[result.verdict].color }}>
-                  {verdictStyle[result.verdict].label} — Risk Score {result.score}/100
+          <div
+            className="scan-result-card"
+            style={{
+              borderColor: verdictStyle[result.verdict].color,
+              background: result.verdict === "malicious" ? "rgba(255, 71, 87, 0.12)" : "rgba(13, 15, 26, 0.95)",
+              border: `2px solid ${verdictStyle[result.verdict].color}`,
+              borderRadius: "14px",
+              padding: "20px",
+              marginTop: "16px",
+              boxShadow: `0 10px 30px ${result.verdict === "malicious" ? "rgba(255, 71, 87, 0.3)" : "rgba(93, 169, 255, 0.15)"}`
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                {React.createElement(verdictStyle[result.verdict].icon, { size: 28, color: verdictStyle[result.verdict].color })}
+                <div>
+                  <div style={{ fontSize: "17px", fontWeight: 700, color: verdictStyle[result.verdict].color }}>
+                    {verdictStyle[result.verdict].label.toUpperCase()} — Threat Score {result.score}/100
+                  </div>
+                  <div style={{ color: "#a5d8ff", fontSize: "13px", marginTop: "2px", fontFamily: "monospace" }}>{result.url}</div>
                 </div>
-                <div className="muted small">{result.url}</div>
               </div>
+
+              <button
+                className="btn-mini-speaker"
+                style={{ width: "auto", padding: "6px 12px", gap: 6, color: "#5da9ff", background: "rgba(93, 169, 255, 0.15)", borderRadius: 8 }}
+                onClick={() => speakText(`URL Threat Scan Complete. Verdict: ${result.verdict}. Threat Score: ${result.score} out of 100. Key reasons: ${result.reasons.join(". ")}`)}
+                title="Listen to scan analysis aloud"
+              >
+                <Volume2 size={15} /> <span>Listen Analysis</span>
+              </button>
             </div>
-            <ul className="cat-list" style={{ marginTop: 12 }}>
-              {result.reasons.map((r, i) => (
-                <li key={i}><span className={`dot ${result.verdict === "safe" ? "blue" : "pink"}`} />{r}</li>
-              ))}
-            </ul>
+
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: "12px", fontWeight: 700, color: "#9aa4bd", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                Detected Attack Signals & Indicators:
+              </div>
+              <ul className="cat-list">
+                {result.reasons.map((r, i) => (
+                  <li key={i} style={{ color: "#eef2fb", fontSize: "13.5px" }}>
+                    <span className={`dot ${result.verdict === "safe" ? "blue" : "pink"}`} />
+                    {r}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="eli5-analogy-box" style={{ marginTop: 12 }}>
+              💡 <b>In Plain Words:</b>{" "}
+              {result.verdict === "malicious"
+                ? "This website is a fake trap designed to trick users into handing over confidential passwords or sensitive banking data."
+                : result.verdict === "suspicious"
+                ? "This link uses unusual server configurations or risky domains often associated with cyber scams."
+                : "This link uses standard secure encryption and shows zero dangerous signature patterns."}
+            </div>
+
             {result.threatCreated && (
-              <p className="muted" style={{ marginTop: 10, fontSize: 12 }}>
-                This scan was logged as a real Threat — check your Dashboard or Risk page.
+              <p style={{ marginTop: 12, fontSize: 12.5, color: "#ff8fc0", display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
+                <AlertTriangle size={14} /> This incident has been logged as a real Threat on your Dashboard & Threat Map.
               </p>
             )}
           </div>
@@ -2726,10 +2775,21 @@ function useThreatAlerts() {
   const prevCountRef = useRef(null);
 
   useEffect(() => {
+    window.__triggerThreatFlash = () => {
+      setFlashing(true);
+      if (soundEnabled) playAlertSiren();
+      setTimeout(() => setFlashing(false), 12000);
+    };
+    return () => {
+      window.__triggerThreatFlash = null;
+    };
+  }, [soundEnabled]);
+
+  useEffect(() => {
     const poll = async () => {
       try {
         const token = localStorage.getItem("cyberintel_token");
-        const res = await fetch("http://localhost:5000/api/dashboard/overview", {
+        const res = await fetch(`${API_BASE_URL}/api/dashboard/overview`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const data = await res.json();
@@ -2739,7 +2799,7 @@ function useThreatAlerts() {
         if (prevCountRef.current !== null && count > prevCountRef.current) {
           setFlashing(true);
           if (soundEnabled) playAlertSiren();
-          setTimeout(() => setFlashing(false), 30000);
+          setTimeout(() => setFlashing(false), 15000);
         }
         prevCountRef.current = count;
       } catch {
@@ -2757,7 +2817,14 @@ function useThreatAlerts() {
 
 function ThreatFlashOverlay({ active }) {
   if (!active) return null;
-  return <div className="threat-flash-overlay" />;
+  return (
+    <div className="threat-flash-overlay">
+      <div className="threat-corner-beacon top-left" />
+      <div className="threat-corner-beacon top-right" />
+      <div className="threat-corner-beacon bottom-left" />
+      <div className="threat-corner-beacon bottom-right" />
+    </div>
+  );
 }
 
 
@@ -2793,13 +2860,28 @@ export default function App() {
 
         /* ---------- threat alert flash ---------- */
         .threat-flash-overlay {
-          position: fixed; inset: 0; z-index: 999; pointer-events: none;
-          animation: threat-flash 1.1s ease-in-out infinite;
+          position: fixed; inset: 0; z-index: 999999; pointer-events: none;
+          box-shadow: inset 0 0 160px rgba(255,45,90,0.85);
+          border: 4px solid rgba(255,45,90,0.9);
+          animation: threatFlashPulse 0.9s ease-in-out infinite;
         }
-        @keyframes threat-flash {
-          0%, 100% { box-shadow: inset 0 0 0px rgba(255,45,90,0); }
-          50% { box-shadow: inset 0 0 140px rgba(255,45,90,0.85); }
+        @keyframes threatFlashPulse {
+          0%, 100% {
+            box-shadow: inset 0 0 50px rgba(255,45,90,0.3);
+            border-color: rgba(255,45,90,0.4);
+          }
+          50% {
+            box-shadow: inset 0 0 180px rgba(255,45,90,0.95);
+            border-color: rgba(255,45,90,1);
+          }
         }
+        .threat-corner-beacon {
+          position: absolute; width: 45px; height: 45px; border: 4px solid #ff2d5a;
+        }
+        .threat-corner-beacon.top-left { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+        .threat-corner-beacon.top-right { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+        .threat-corner-beacon.bottom-left { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+        .threat-corner-beacon.bottom-right { bottom: 10px; right: 10px; border-left: none; border-top: none; }
 
         /* ---------- ambient background ---------- */
         .ambient-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
