@@ -2739,6 +2739,14 @@ export default function App() {
   const Current = currentPage.component || OverviewPage;
   const { flashing, soundEnabled, setSoundEnabled } = useThreatAlerts();
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+    const contentEl = document.querySelector(".content");
+    if (contentEl) contentEl.scrollTop = 0;
+  }, [active]);
+
   return (
     <div className="dash-root">
       <style>{`

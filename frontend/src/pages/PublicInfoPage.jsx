@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   ShieldCheck, ArrowLeft, ArrowRight, ScanFace, Cpu, Radar, Activity, BarChart3,
@@ -258,6 +258,12 @@ export default function PublicInfoPage() {
   const navigate = useNavigate();
   const entry = CONTENT[page] || CONTENT.about;
   const Content = entry.Component;
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }, [page]);
 
   return (
     <div className="public-root">
