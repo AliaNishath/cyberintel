@@ -3556,6 +3556,16 @@ export default function App() {
 
         /* Responsive Mobile Layout (<= 768px) */
         @media (max-width: 768px) {
+          html, body {
+            overflow-x: auto !important;
+            touch-action: pan-x pan-y pinch-zoom;
+            -webkit-overflow-scrolling: touch;
+          }
+          .dash-root {
+            overflow-x: auto !important;
+            overflow-y: visible !important;
+            touch-action: pan-x pan-y pinch-zoom;
+          }
           .mobile-menu-btn { display: flex; }
           .sidebar-close-btn { display: flex; }
           .sidebar {
@@ -3577,6 +3587,8 @@ export default function App() {
           .main {
             margin-left: 0 !important;
             width: 100% !important;
+            min-width: 100%;
+            overflow-x: visible !important;
           }
           .topbar {
             padding: 12px 14px;
@@ -3606,7 +3618,21 @@ export default function App() {
             display: none;
           }
           .content {
-            padding: 16px 12px;
+            padding: 14px 10px;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-x pan-y pinch-zoom;
+          }
+          .panel {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            max-width: 100%;
+          }
+          .data-table {
+            min-width: 520px;
+          }
+          .grid-2, .stat-grid, .directory-grid, .mini-module-grid {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>
