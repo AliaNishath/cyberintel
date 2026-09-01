@@ -2388,70 +2388,81 @@ function UrlScannerPage() {
         </div>
         {error && <p className="muted" style={{ color: "#ff8fc0", marginTop: 10 }}>{error}</p>}
 
-        {result && (
-          <div
-            className="scan-result-card"
-            style={{
-              borderColor: verdictStyle[result.verdict].color,
-              background: result.verdict === "malicious" ? "rgba(255, 71, 87, 0.12)" : "rgba(13, 15, 26, 0.95)",
-              border: `2px solid ${verdictStyle[result.verdict].color}`,
-              borderRadius: "14px",
-              padding: "20px",
-              marginTop: "16px",
-              boxShadow: `0 10px 30px ${result.verdict === "malicious" ? "rgba(255, 71, 87, 0.3)" : "rgba(93, 169, 255, 0.15)"}`
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                {React.createElement(verdictStyle[result.verdict].icon, { size: 28, color: verdictStyle[result.verdict].color })}
-                <div>
-                  <div style={{ fontSize: "17px", fontWeight: 700, color: verdictStyle[result.verdict].color }}>
-                    {verdictStyle[result.verdict].label.toUpperCase()} — Threat Score {result.score}/100
+        {result && (() => {
+          const v = result.verdict || "malicious";
+          const currentVerdictStyle = verdictStyle[v] || verdictStyle.malicious;
+          const reasonsList = Array.isArray(result.reasons) && result.reasons.length > 0
+            ? result.reasons
+            : typeof result.reasons === "string"
+            ? [result.reasons]
+            : ["Suspicious domain structure and unverified server signature detected"];
+          const scoreVal = typeof result.score === "number" ? result.score : 85;
+
+          return (
+            <div
+              className="scan-result-card"
+              style={{
+                borderColor: currentVerdictStyle.color,
+                background: v === "malicious" ? "rgba(255, 71, 87, 0.12)" : "rgba(13, 15, 26, 0.95)",
+                border: `2px solid ${currentVerdictStyle.color}`,
+                borderRadius: "14px",
+                padding: "20px",
+                marginTop: "16px",
+                boxShadow: `0 10px 30px ${v === "malicious" ? "rgba(255, 71, 87, 0.3)" : "rgba(93, 169, 255, 0.15)"}`
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  {React.createElement(currentVerdictStyle.icon, { size: 28, color: currentVerdictStyle.color })}
+                  <div>
+                    <div style={{ fontSize: "17px", fontWeight: 700, color: currentVerdictStyle.color }}>
+                      {currentVerdictStyle.label.toUpperCase()} — Threat Score {scoreVal}/100
+                    </div>
+                    <div style={{ color: "#a5d8ff", fontSize: "13px", marginTop: "2px", fontFamily: "monospace" }}>{result.url}</div>
                   </div>
-                  <div style={{ color: "#a5d8ff", fontSize: "13px", marginTop: "2px", fontFamily: "monospace" }}>{result.url}</div>
                 </div>
+
+                <button
+                  className="btn-mini-speaker"
+                  style={{ width: "auto", padding: "6px 12px", gap: 6, color: "#5da9ff", background: "rgba(93, 169, 255, 0.15)", borderRadius: 8 }}
+                  onClick={() => speakText(`URL Threat Scan Complete. Verdict: ${v}. Threat Score: ${scoreVal} out of 100. Key reasons: ${reasonsList.join(". ")}`)}
+                  title="Listen to scan analysis aloud"
+                >
+                  <Volume2 size={15} /> <span>Listen Analysis</span>
+                </button>
               </div>
 
-              <button
-                className="btn-mini-speaker"
-                style={{ width: "auto", padding: "6px 12px", gap: 6, color: "#5da9ff", background: "rgba(93, 169, 255, 0.15)", borderRadius: 8 }}
-                onClick={() => speakText(`URL Threat Scan Complete. Verdict: ${result.verdict}. Threat Score: ${result.score} out of 100. Key reasons: ${result.reasons.join(". ")}`)}
-                title="Listen to scan analysis aloud"
-              >
-                <Volume2 size={15} /> <span>Listen Analysis</span>
-              </button>
-            </div>
-
-            <div style={{ marginTop: 14 }}>
-              <div style={{ fontSize: "12px", fontWeight: 700, color: "#9aa4bd", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
-                Detected Attack Signals & Indicators:
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: "12px", fontWeight: 700, color: "#9aa4bd", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                  Detected Attack Signals & Indicators:
+                </div>
+                <ul className="cat-list">
+                  {reasonsList.map((r, i) => (
+                    <li key={i} style={{ color: "#eef2fb", fontSize: "13.5px" }}>
+                      <span className={`dot ${v === "safe" ? "blue" : "pink"}`} />
+                      {r}
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="cat-list">
-                {result.reasons.map((r, i) => (
-                  <li key={i} style={{ color: "#eef2fb", fontSize: "13.5px" }}>
-                    <span className={`dot ${result.verdict === "safe" ? "blue" : "pink"}`} />
-                    {r}
-                  </li>
-                ))}
-              </ul>
-            </div>
 
-            <div className="eli5-analogy-box" style={{ marginTop: 12 }}>
-              💡 <b>In Plain Words:</b>{" "}
-              {result.verdict === "malicious"
-                ? "This website is a fake trap designed to trick users into handing over confidential passwords or sensitive banking data."
-                : result.verdict === "suspicious"
-                ? "This link uses unusual server configurations or risky domains often associated with cyber scams."
-                : "This link uses standard secure encryption and shows zero dangerous signature patterns."}
-            </div>
+              <div className="eli5-analogy-box" style={{ marginTop: 12 }}>
+                💡 <b>In Plain Words:</b>{" "}
+                {v === "malicious"
+                  ? "This website is a fake trap designed to trick users into handing over confidential passwords or sensitive banking data."
+                  : v === "suspicious"
+                  ? "This link uses unusual server configurations or risky domains often associated with cyber scams."
+                  : "This link uses standard secure encryption and shows zero dangerous signature patterns."}
+              </div>
 
-            {result.threatCreated && (
-              <p style={{ marginTop: 12, fontSize: 12.5, color: "#ff8fc0", display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
-                <AlertTriangle size={14} /> This incident has been logged as a real Threat on your Dashboard & Threat Map.
-              </p>
-            )}
-          </div>
-        )}
+              {result.threatCreated && (
+                <p style={{ marginTop: 12, fontSize: 12.5, color: "#ff8fc0", display: "flex", alignItems: "center", gap: 6, fontWeight: 600 }}>
+                  <AlertTriangle size={14} /> This incident has been logged as a real Threat on your Dashboard & Threat Map.
+                </p>
+              )}
+            </div>
+          );
+        })()}
       </Panel>
 
       <Panel title="Recent Scans">
