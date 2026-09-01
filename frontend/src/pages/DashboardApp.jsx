@@ -2279,10 +2279,7 @@ function UrlScannerPage() {
 
   const handleScan = async () => {
     const targetUrl = url.trim();
-    if (!targetUrl || scanning) return;
-    setScanning(true);
-    setError("");
-    setResult(null);
+    if (!targetUrl) return;
 
     const evaluateLocalHeuristics = (rawUrl) => {
       let score = 0;
@@ -2291,7 +2288,7 @@ function UrlScannerPage() {
 
       if (!lower.startsWith("https://")) {
         score += 20;
-        reasons.push("Insecure connection (HTTP / No TLS encryption)");
+        reasons.push("Site does not use HTTPS encryption");
       }
       if (/https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(lower)) {
         score += 45;
@@ -2299,11 +2296,15 @@ function UrlScannerPage() {
       }
       if (/\.(xyz|top|click|link|work|gq|cf|tk|ml|ga|zip|mov)(\/|$)/.test(lower)) {
         score += 35;
-        reasons.push("High-risk Top-Level Domain (frequently abused by adversaries)");
+        reasons.push("Domain uses a TLD commonly associated with abuse (.xyz, .click)");
+      }
+      if (lower.split(".").length > 3) {
+        score += 15;
+        reasons.push("Unusually high number of subdomains");
       }
       if (/(paypal|netflix|apple|google|chase|bank|verify|login|secure|account|update|suspended)/.test(lower)) {
         score += 30;
-        reasons.push("Phishing deception & brand impersonation keyword signature detected");
+        reasons.push("URL contains wording commonly used in phishing links");
       }
       if (score > 100) score = 100;
       const verdict = score >= 50 ? "malicious" : score > 15 ? "suspicious" : "safe";
@@ -2311,6 +2312,21 @@ function UrlScannerPage() {
       return { url: rawUrl, verdict, score, reasons, threatCreated: verdict !== "safe" };
     };
 
+    // 1. Instantly display analysis card without waiting
+    const instantResult = evaluateLocalHeuristics(targetUrl);
+    setResult(instantResult);
+    setError("");
+
+    // 2. Fire synchronized siren sound + red perimeter lights
+    if (instantResult.verdict === "malicious" || instantResult.verdict === "suspicious") {
+      if (typeof window !== "undefined" && window.__triggerThreatFlash) {
+        window.__triggerThreatFlash(6);
+      } else {
+        playAlertSiren(6);
+      }
+    }
+
+    // 3. Sync to backend in background for persistence, admin email alert, and history
     try {
       const token = localStorage.getItem("cyberintel_token");
       const res = await fetch(`${API_BASE_URL}/api/threats/scan-url`, {
@@ -2322,31 +2338,12 @@ function UrlScannerPage() {
         body: JSON.stringify({ url: targetUrl }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Scan failed");
-      setResult(data);
-
-      if (data.verdict === "malicious" || data.verdict === "suspicious") {
-        if (typeof window !== "undefined" && window.__triggerThreatFlash) {
-          window.__triggerThreatFlash(6);
-        } else {
-          playAlertSiren(6);
-        }
+      if (res.ok && data) {
+        setResult(data);
+        if (data.threatCreated) loadHistory();
       }
-
-      if (data.threatCreated) loadHistory();
     } catch (err) {
-      console.warn("Backend scan error, using heuristic fallback:", err.message);
-      const fallbackResult = evaluateLocalHeuristics(targetUrl);
-      setResult(fallbackResult);
-      if (fallbackResult.verdict === "malicious" || fallbackResult.verdict === "suspicious") {
-        if (typeof window !== "undefined" && window.__triggerThreatFlash) {
-          window.__triggerThreatFlash(6);
-        } else {
-          playAlertSiren(6);
-        }
-      }
-    } finally {
-      setScanning(false);
+      console.warn("Background threat log sync:", err.message);
     }
   };
 
