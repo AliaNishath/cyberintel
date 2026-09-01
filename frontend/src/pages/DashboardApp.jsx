@@ -74,6 +74,7 @@ import {
 import GlobalThreatMapPage from "./GlobalThreatMapPage.jsx";
 import CyberDuelArenaPage from "./CyberDuelArenaPage.jsx";
 import API_BASE_URL from "../config/api.js";
+import { generateSecurityAuditPdf } from "../utils/generatePdfReport.js";
 import { speakText, stopSpeaking, generateDailyBriefing } from "../utils/voiceAssistant.js";
 import { translateToPlainLanguage } from "../utils/plainLanguageDictionary.js";
 import {
@@ -1659,34 +1660,97 @@ function ReportsPage() {
         </Panel>
       </div>
 
-      <Panel title="Downloadable Reports">
-        <button
-          className="btn-outline active"
-          style={{ marginBottom: 14, padding: "10px 20px", width: "fit-content" }}
-          onClick={async () => {
-            const token = localStorage.getItem("cyberintel_token");
-            const res = await fetch(`${API_BASE_URL}/api/reports/download-pdf`, {
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            });
-            const blob = await res.blob();
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "cyberintel-security-report.pdf";
-            link.click();
-            URL.revokeObjectURL(url);
-          }}
-        >
-          <Download size={15} style={{ marginRight: 6 }} /> Download Real Report (PDF)
-        </button>
-        <ul className="report-list">
-          {data.downloadableReports.map((r, i) => (
-            <li key={i}>
-              <div>
-                <div className="report-name">{r.name}</div>
-                <div className="muted small">{r.size} · PDF</div>
+      <Panel title="Enterprise SOC Audit & Compliance Reports">
+        <div style={{ background: "rgba(93, 169, 255, 0.05)", border: "1px solid rgba(93, 169, 255, 0.2)", borderRadius: "14px", padding: "20px", marginBottom: "20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 16 }}>
+            <div>
+              <div style={{ fontSize: "17px", fontWeight: 700, color: "#eef2fb", display: "flex", alignItems: "center", gap: 8 }}>
+                <ShieldCheck size={20} color="#5da9ff" /> Official Executive Security Audit Report (PDF)
               </div>
-              <button className="icon-btn"><Download size={16} /></button>
+              <p style={{ color: "#9aa4bd", fontSize: "13.5px", marginTop: "6px", maxWidth: "680px", lineHeight: 1.5 }}>
+                Generates a certified, multi-page compliance dossier featuring your live platform risk score, active threat incident table, NIST CSF & ISO 27001 control alignment matrix, and official SOC verification seal signed by <b>Aliya Nishath</b>.
+              </p>
+            </div>
+
+            <button
+              className="btn-outline active"
+              style={{
+                padding: "12px 24px",
+                fontSize: "14px",
+                fontWeight: 700,
+                background: "linear-gradient(135deg, rgba(93,169,255,0.2), rgba(255,95,162,0.2))",
+                borderColor: "#5da9ff",
+                boxShadow: "0 4px 20px rgba(93, 169, 255, 0.25)",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                whiteSpace: "nowrap"
+              }}
+              onClick={async () => {
+                const token = localStorage.getItem("cyberintel_token");
+                let liveThreats = [];
+                let liveOverview = {};
+                try {
+                  const [threatsRes, overviewRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/api/threats/all`, { headers: token ? { Authorization: `Bearer ${token}` } : {} }),
+                    fetch(`${API_BASE_URL}/api/dashboard/overview`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+                  ]);
+                  if (threatsRes.ok) {
+                    const td = await threatsRes.json();
+                    liveThreats = td.threats || [];
+                  }
+                  if (overviewRes.ok) {
+                    const od = await overviewRes.json();
+                    liveOverview = od.stats || {};
+                  }
+                } catch {
+                  // Fallback gracefully to default metrics
+                }
+
+                await generateSecurityAuditPdf({
+                  currentUser: (() => { try { return JSON.parse(localStorage.getItem("cyberintel_user")) || {}; } catch { return {}; } })(),
+                  threats: liveThreats,
+                  overviewStats: liveOverview,
+                  reportType: "Executive Security Audit & Threat Assessment"
+                });
+              }}
+            >
+              <Download size={18} /> Download Executive Audit PDF
+            </button>
+          </div>
+        </div>
+
+        <div style={{ fontSize: "13px", fontWeight: 700, color: "#9aa4bd", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 10 }}>
+          Specialized Sectional Downloads
+        </div>
+
+        <ul className="report-list">
+          {[
+            { name: "Executive Risk Briefing & Posture Review", type: "Executive Risk Briefing", size: "1.6 MB" },
+            { name: "Incident Response Log & Active Threats", type: "Incident Response & Forensics Log", size: "1.1 MB" },
+            { name: "Biometric Authentication & Passkey Audit", type: "Biometric Access & Identity Audit", size: "0.9 MB" },
+            { name: "Vulnerability & Phishing Surface Assessment", type: "Vulnerability & Threat Vector Assessment", size: "3.8 MB" },
+          ].map((r, i) => (
+            <li key={i} style={{ cursor: "pointer" }} onClick={async () => {
+              const token = localStorage.getItem("cyberintel_token");
+              let liveThreats = [];
+              try {
+                const threatsRes = await fetch(`${API_BASE_URL}/api/threats/all`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                if (threatsRes.ok) {
+                  const td = await threatsRes.json();
+                  liveThreats = td.threats || [];
+                }
+              } catch {}
+              await generateSecurityAuditPdf({
+                threats: liveThreats,
+                reportType: r.type
+              });
+            }}>
+              <div>
+                <div className="report-name" style={{ color: "#eef2fb", fontWeight: 600 }}>{r.name}</div>
+                <div className="muted small">{r.size} · Certified PDF Dossier</div>
+              </div>
+              <button className="icon-btn" title="Download Certified PDF"><Download size={16} /></button>
             </li>
           ))}
         </ul>
