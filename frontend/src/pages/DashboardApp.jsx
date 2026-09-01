@@ -62,6 +62,8 @@ import {
   Square,
   Headphones,
   Brain,
+  Menu,
+  X,
 } from "lucide-react";
 import {
   BreachCheckerPage,
@@ -346,7 +348,7 @@ function AmbientBackground() {
 }
 
 /* ---------------------------- Sidebar ---------------------------- */
-function Sidebar({ active, setActive }) {
+function Sidebar({ active, setActive, mobileMenuOpen, setMobileMenuOpen }) {
   const [hovered, setHovered] = useState(false);
 
   const currentRole = (() => {
@@ -359,41 +361,58 @@ function Sidebar({ active, setActive }) {
 
   const visibleGroups = NAV_GROUPS.filter((g) => !g.adminOnly || currentRole === "admin");
 
-  return (
-    <aside
-      className={`sidebar ${hovered ? "expanded" : ""}`}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      <div className="sidebar-brand">
-        <ShieldCheck size={22} color="#5da9ff" />
-        <span className="brand-text">
-          Cyber<span className="brand-accent">Intel</span>
-        </span>
-      </div>
+  const handleSelect = (key) => {
+    setActive(key);
+    if (setMobileMenuOpen) setMobileMenuOpen(false);
+  };
 
-      {visibleGroups.map((group) => (
-        <div className="nav-group" key={group.label}>
-          <div className="nav-group-label">{group.label}</div>
-          {group.items.map((item) => (
-            <button
-              key={item.key}
-              className={`nav-item ${active === item.key ? "active" : ""}`}
-              onClick={() => setActive(item.key)}
-              title={item.label}
-            >
-              <item.icon size={18} />
-              <span className="nav-label">{item.label}</span>
+  return (
+    <>
+      {mobileMenuOpen && (
+        <div className="sidebar-backdrop" onClick={() => setMobileMenuOpen(false)} />
+      )}
+      <aside
+        className={`sidebar ${hovered ? "expanded" : ""} ${mobileMenuOpen ? "mobile-open" : ""}`}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <div className="sidebar-head-row">
+          <div className="sidebar-brand">
+            <ShieldCheck size={22} color="#5da9ff" />
+            <span className="brand-text">
+              Cyber<span className="brand-accent">Intel</span>
+            </span>
+          </div>
+          {mobileMenuOpen && (
+            <button className="sidebar-close-btn" onClick={() => setMobileMenuOpen(false)}>
+              <X size={18} />
             </button>
-          ))}
+          )}
         </div>
-      ))}
-    </aside>
+
+        {visibleGroups.map((group) => (
+          <div className="nav-group" key={group.label}>
+            <div className="nav-group-label">{group.label}</div>
+            {group.items.map((item) => (
+              <button
+                key={item.key}
+                className={`nav-item ${active === item.key ? "active" : ""}`}
+                onClick={() => handleSelect(item.key)}
+                title={item.label}
+              >
+                <item.icon size={18} />
+                <span className="nav-label">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+      </aside>
+    </>
   );
 }
 
 /* ---------------------------- Topbar ---------------------------- */
-function Topbar({ title, setActive, soundEnabled, setSoundEnabled }) {
+function Topbar({ title, setActive, soundEnabled, setSoundEnabled, setMobileMenuOpen }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -517,7 +536,16 @@ function Topbar({ title, setActive, soundEnabled, setSoundEnabled }) {
   return (
     <>
       <div className="topbar">
-        <h2>{title}</h2>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            className="mobile-menu-btn"
+            onClick={() => setMobileMenuOpen && setMobileMenuOpen((o) => !o)}
+            title="Toggle Menu"
+          >
+            <Menu size={20} />
+          </button>
+          <h2>{title}</h2>
+        </div>
         <div className="topbar-right">
           <div className="search-wrap">
             <div className="search-box">
@@ -2735,6 +2763,7 @@ function ThreatFlashOverlay({ active }) {
 
 export default function App() {
   const [active, setActive] = useState("overview");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const currentPage = PAGES[active] || PAGES.overview || { title: "Dashboard", component: OverviewPage };
   const Current = currentPage.component || OverviewPage;
   const { flashing, soundEnabled, setSoundEnabled } = useThreatAlerts();
@@ -3364,20 +3393,113 @@ export default function App() {
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
+        /* Mobile menu button (hidden on desktop) */
+        .mobile-menu-btn {
+          display: none;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: #eef2fb;
+          width: 36px; height: 36px; border-radius: 9px;
+          align-items: center; justify-content: center;
+          cursor: pointer; transition: all 0.15s ease;
+        }
+        .mobile-menu-btn:hover {
+          background: rgba(93, 169, 255, 0.15);
+          color: #5da9ff;
+          border-color: #5da9ff;
+        }
+        .sidebar-head-row {
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .sidebar-close-btn {
+          display: none;
+          background: none; border: none; color: #9aa4bd;
+          cursor: pointer; padding: 4px;
+        }
+        .sidebar-backdrop {
+          position: fixed; inset: 0;
+          background: rgba(0, 0, 0, 0.75);
+          backdrop-filter: blur(6px);
+          z-index: 9998;
+          animation: fadeIn 0.2s ease-out;
+        }
+
         @media (max-width: 900px) {
           .stat-grid, .grid-2, .method-grid, .glossary-grid, .directory-grid { grid-template-columns: 1fr; }
           .search-box { display: none; }
           .pie-row { flex-direction: column; }
+        }
+
+        /* Responsive Mobile Layout (<= 768px) */
+        @media (max-width: 768px) {
+          .mobile-menu-btn { display: flex; }
+          .sidebar-close-btn { display: flex; }
+          .sidebar {
+            position: fixed; top: 0; left: 0; bottom: 0;
+            width: 270px; max-width: 80vw;
+            transform: translateX(-100%);
+            z-index: 9999;
+            box-shadow: 20px 0 50px rgba(0, 0, 0, 0.8);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          }
+          .sidebar.mobile-open {
+            transform: translateX(0);
+          }
+          .sidebar.mobile-open .brand-text,
+          .sidebar.mobile-open .nav-label,
+          .sidebar.mobile-open .nav-group-label {
+            opacity: 1;
+          }
+          .main {
+            margin-left: 0 !important;
+            width: 100% !important;
+          }
+          .topbar {
+            padding: 12px 14px;
+            gap: 8px;
+          }
+          .topbar h2 {
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 130px;
+          }
+          .topbar-right {
+            gap: 6px;
+          }
+          .search-wrap {
+            display: none !important;
+          }
+          .btn-briefing {
+            padding: 6px 8px;
+            font-size: 11px;
+          }
+          .btn-briefing span {
+            display: none;
+          }
+          .profile-info {
+            display: none;
+          }
+          .content {
+            padding: 16px 12px;
+          }
         }
       `}</style>
 
       <ThreatFlashOverlay active={flashing} />
       <AmbientBackground />
 
-      <Sidebar active={active} setActive={setActive} />
+      <Sidebar active={active} setActive={setActive} mobileMenuOpen={mobileMenuOpen} setMobileMenuOpen={setMobileMenuOpen} />
 
       <div className="main">
-        <Topbar title={currentPage.title} setActive={setActive} soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} />
+        <Topbar
+          title={currentPage.title}
+          setActive={setActive}
+          soundEnabled={soundEnabled}
+          setSoundEnabled={setSoundEnabled}
+          setMobileMenuOpen={setMobileMenuOpen}
+        />
         <div className="content">
           <Current />
         </div>
