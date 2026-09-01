@@ -67,12 +67,15 @@ export async function scanUrl(req, res) {
 export async function getScanHistory(req, res) {
   try {
     const userEmail = req.user?.email;
+    const isAdmin = req.user?.role === "admin";
     const filter = { type: "Malicious URL" };
-    if (userEmail) {
+
+    // Regular users only see their own scans; Admins see all scans across the organization
+    if (!isAdmin && userEmail) {
       filter.relatedEmail = userEmail;
     }
 
-    const scans = await Threat.find(filter).sort({ createdAt: -1 }).limit(20);
+    const scans = await Threat.find(filter).sort({ createdAt: -1 }).limit(50);
     res.json({
       scans: scans.map((s) => ({
         url: s.scannedUrl,
@@ -80,6 +83,7 @@ export async function getScanHistory(req, res) {
         score: s.riskScore,
         reasons: s.reasons,
         scannedAt: s.createdAt,
+        userEmail: s.relatedEmail || "System",
       })),
     });
   } catch (err) {

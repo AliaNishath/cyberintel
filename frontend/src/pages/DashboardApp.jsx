@@ -2261,6 +2261,13 @@ function UrlScannerPage() {
   const [error, setError] = useState("");
   const [history, setHistory] = useState([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const currentUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("cyberintel_user")) || {};
+    } catch {
+      return {};
+    }
+  })();
 
   const loadHistory = () => {
     const token = localStorage.getItem("cyberintel_token");
@@ -2469,13 +2476,22 @@ function UrlScannerPage() {
         )}
         {!historyLoading && history.length > 0 && (
           <table className="data-table">
-            <thead><tr><th>URL</th><th>Verdict</th><th>Score</th><th>Scanned</th></tr></thead>
+            <thead>
+              <tr>
+                <th>URL</th>
+                <th>Verdict</th>
+                <th>Score</th>
+                {currentUser.role === "admin" && <th>Scanned By</th>}
+                <th>Scanned</th>
+              </tr>
+            </thead>
             <tbody>
               {history.map((h, i) => (
                 <tr key={i}>
                   <td style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{h.url}</td>
                   <td><span className={`status-pill ${h.verdict === "malicious" ? "bad" : "ok"}`}>{h.verdict}</span></td>
                   <td>{h.score}/100</td>
+                  {currentUser.role === "admin" && <td style={{ color: "#a5d8ff", fontSize: "12.5px" }}>{h.userEmail || "System"}</td>}
                   <td className="muted">{new Date(h.scannedAt).toLocaleString()}</td>
                 </tr>
               ))}
