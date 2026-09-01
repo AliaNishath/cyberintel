@@ -16,7 +16,7 @@ import {
   ScanFace,
 } from "lucide-react";
 import LanguageSelector from "../components/LanguageSelector.jsx";
-import FaceScannerModal from "../components/FaceScannerModal.jsx";
+import FaceScannerModal, { preloadFaceModels } from "../components/FaceScannerModal.jsx";
 
 /* ---------------------------------------------------------
    CyberIntel — Auth Flow
@@ -122,6 +122,10 @@ function LoginView({ goto }) {
   const [loading, setLoading] = useState(false);
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [showFaceModal, setShowFaceModal] = useState(false);
+
+  useEffect(() => {
+    preloadFaceModels().catch(() => {});
+  }, []);
 
   const handleLogin = async () => {
     setError("");

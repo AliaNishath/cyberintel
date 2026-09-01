@@ -1,7 +1,20 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import * as faceapi from "@vladmandic/face-api";
 import { ScanFace, X, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, Camera } from "lucide-react";
 import API_BASE_URL from "../config/api.js";
+
+// Global cache for models so they load once and stay hot in browser GPU memory
+let globalModelPromise = null;
+export function preloadFaceModels() {
+  if (!globalModelPromise) {
+    globalModelPromise = Promise.all([
+      faceapi.nets.ssdMobilenetv1.loadFromUri("/models"),
+      faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
+      faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
+    ]);
+  }
+  return globalModelPromise;
+}
 
 export default function FaceScannerModal({ mode = "identify", onSuccess, onClose, token = null }) {
   const videoRef = useRef(null);
@@ -30,31 +43,30 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
 
     async function init() {
       try {
-        setStatus("Loading face detection & biometric models...");
+        setStatus("Accessing camera & biometric AI...");
         setStatusType("info");
 
-        // Load models from public/models folder
-        await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri("/models"),
-          faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
-          faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
+        // Concurrent initialization: load models and start camera stream in parallel
+        const [models, stream] = await Promise.all([
+          preloadFaceModels(),
+          navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 480, max: 640 },
+              height: { ideal: 360, max: 480 },
+              facingMode: "user",
+            },
+            audio: false,
+          }),
         ]);
 
-        if (!isMounted) return;
-        setLoadingModels(false);
-
-        setStatus("Opening camera stream...");
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" },
-          audio: false,
-        });
-
         if (!isMounted) {
-          stream.getTracks().forEach((t) => t.stop());
+          if (stream) stream.getTracks().forEach((t) => t.stop());
           return;
         }
 
+        setLoadingModels(false);
         streamRef.current = stream;
+
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.onloadedmetadata = () => {
@@ -88,26 +100,34 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
     setStatusType("scanning");
 
     let matchAttempts = 0;
+    let isProcessingFrame = false;
 
     const scanInterval = setInterval(async () => {
-      if (!isScanningRef.current || !videoRef.current || !canvasRef.current) {
-        clearInterval(scanInterval);
+      if (!isScanningRef.current || !videoRef.current || !canvasRef.current || isProcessingFrame) {
+        if (!isScanningRef.current) clearInterval(scanInterval);
         return;
       }
+
+      isProcessingFrame = true;
 
       try {
         const video = videoRef.current;
         const canvas = canvasRef.current;
 
-        if (video.videoWidth === 0 || video.videoHeight === 0) return;
+        if (video.videoWidth === 0 || video.videoHeight === 0) {
+          isProcessingFrame = false;
+          return;
+        }
 
-        // Set canvas dimensions to match video
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        // Match canvas dimensions to video
+        if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+        }
 
-        // Run full facial detection + landmarks + 128D descriptor extraction
+        // Run detection with optimized options
         const detection = await faceapi
-          .detectSingleFace(video)
+          .detectSingleFace(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
           .withFaceLandmarks()
           .withFaceDescriptor();
 
@@ -118,7 +138,7 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
           const dims = faceapi.matchDimensions(canvas, video, true);
           const resized = faceapi.resizeResults(detection, dims);
 
-          // Draw custom cyberpunk bounding box
+          // Draw bounding box
           const box = resized.detection.box;
           ctx.strokeStyle = "#5da9ff";
           ctx.lineWidth = 2;
@@ -128,16 +148,12 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
           const cornerLen = 14;
           ctx.strokeStyle = "#ff5fa2";
           ctx.lineWidth = 3;
-          // Top Left
           ctx.beginPath(); ctx.moveTo(box.x, box.y + cornerLen); ctx.lineTo(box.x, box.y); ctx.lineTo(box.x + cornerLen, box.y); ctx.stroke();
-          // Top Right
           ctx.beginPath(); ctx.moveTo(box.x + box.width - cornerLen, box.y); ctx.lineTo(box.x + box.width, box.y); ctx.lineTo(box.x + box.width, box.y + cornerLen); ctx.stroke();
-          // Bottom Left
           ctx.beginPath(); ctx.moveTo(box.x, box.y + box.height - cornerLen); ctx.lineTo(box.x, box.y + box.height); ctx.lineTo(box.x + cornerLen, box.y + box.height); ctx.stroke();
-          // Bottom Right
           ctx.beginPath(); ctx.moveTo(box.x + box.width - cornerLen, box.y + box.height); ctx.lineTo(box.x + box.width, box.y + box.height); ctx.lineTo(box.x + box.width, box.y + box.height - cornerLen); ctx.stroke();
 
-          // Convert Float32Array to regular 128-float array
+          // Convert Float32Array to 128-D float array
           const descriptor = Array.from(detection.descriptor);
 
           if (mode === "enroll") {
@@ -146,7 +162,7 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
             setStatus("Face detected! Saving 128-D biometric vector...");
             setStatusType("info");
 
-            const authToken = token || localStorage.getItem("token");
+            const authToken = token || localStorage.getItem("token") || localStorage.getItem("cyberintel_token");
             const res = await fetch(`${API_BASE_URL}/api/auth/face/enroll`, {
               method: "POST",
               headers: {
@@ -188,28 +204,32 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
               setStatus(`✨ Verified: ${data.user.fullName} (${data.confidence}% Match)`);
               setStatusType("success");
 
-              // Save token and invoke onSuccess callback
               if (data.token) {
                 localStorage.setItem("token", data.token);
+                localStorage.setItem("cyberintel_token", data.token);
+                localStorage.setItem("cyberintel_auth", "true");
                 localStorage.setItem("user", JSON.stringify(data.user));
+                localStorage.setItem("cyberintel_user", JSON.stringify(data.user));
               }
 
               setTimeout(() => {
                 stopCamera();
                 if (onSuccess) onSuccess(data);
-              }, 1400);
+              }, 1200);
             } else {
-              if (matchAttempts >= 5) {
+              if (matchAttempts >= 6) {
                 setStatusType("error");
-                setErrorMsg(data.message || "Face not recognized. Please sign in with password.");
+                setErrorMsg(data.message || "Face not recognized. Please adjust lighting or sign in with password.");
               }
             }
           }
         }
       } catch (err) {
         console.error("Scan loop error:", err);
+      } finally {
+        isProcessingFrame = false;
       }
-    }, 450);
+    }, 280);
   };
 
   const handleRetry = () => {
@@ -230,7 +250,7 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px;
+          padding: 16px;
           animation: fadeIn 0.2s ease-out;
         }
         @keyframes fadeIn {
@@ -238,49 +258,36 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
           to { opacity: 1; transform: scale(1); }
         }
         .face-modal-card {
-          width: 100%;
-          max-width: 520px;
-          background: rgba(13, 15, 26, 0.95);
-          border: 1px solid rgba(93, 169, 255, 0.25);
+          background: rgba(13, 15, 26, 0.98);
+          border: 1px solid rgba(93, 169, 255, 0.3);
           border-radius: 20px;
+          width: 100%;
+          max-width: 440px;
           overflow: hidden;
-          box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(93, 169, 255, 0.15);
-          position: relative;
+          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(93, 169, 255, 0.15);
+          display: flex;
+          flex-direction: column;
         }
-        .face-modal-header {
+        .face-modal-head {
+          padding: 18px 20px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 16px 20px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-          background: rgba(255, 255, 255, 0.02);
         }
         .face-modal-title {
+          font-size: 16px;
+          font-weight: 700;
+          color: #fff;
           display: flex;
           align-items: center;
-          gap: 10px;
-          font-weight: 700;
-          font-size: 16px;
-          color: #eef2fb;
+          gap: 8px;
         }
-        .face-modal-close {
-          background: none;
-          border: none;
-          color: #9aa4bd;
-          cursor: pointer;
-          padding: 6px;
-          border-radius: 8px;
-          transition: all 0.15s ease;
-        }
-        .face-modal-close:hover {
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-        }
-        .face-viewport {
+        .face-viewfinder-wrap {
           position: relative;
           width: 100%;
           height: 320px;
-          background: #05060a;
+          background: #000;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -290,155 +297,139 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
           width: 100%;
           height: 100%;
           object-fit: cover;
-          transform: scaleX(-1); /* Mirror view */
+          transform: scaleX(-1); /* Mirror camera */
         }
         .face-canvas {
           position: absolute;
           inset: 0;
           width: 100%;
           height: 100%;
-          transform: scaleX(-1); /* Mirror canvas to align with mirrored video */
+          transform: scaleX(-1);
           pointer-events: none;
         }
-        .scan-laser {
+        .face-scan-line {
           position: absolute;
           left: 0;
           right: 0;
           height: 2px;
           background: linear-gradient(90deg, transparent, #5da9ff, #ff5fa2, transparent);
           box-shadow: 0 0 12px #5da9ff;
-          animation: laserScan 2.4s ease-in-out infinite alternate;
+          animation: scanMove 2s ease-in-out infinite alternate;
           pointer-events: none;
         }
-        @keyframes laserScan {
+        @keyframes scanMove {
           0% { top: 10%; }
-          100% { top: 90%; }
+          100% { top: 88%; }
         }
-        .face-grid-overlay {
-          position: absolute;
-          inset: 0;
-          background-image: linear-gradient(rgba(93, 169, 255, 0.05) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(93, 169, 255, 0.05) 1px, transparent 1px);
-          background-size: 24px 24px;
-          pointer-events: none;
-        }
-        .face-status-bar {
+        .face-modal-footer {
           padding: 16px 20px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
+          background: rgba(8, 10, 18, 0.95);
         }
-        .status-chip {
+        .face-status-bar {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           font-size: 13px;
+          color: #cdd4e6;
           padding: 10px 14px;
           border-radius: 10px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.06);
         }
-        .status-chip.info {
+        .face-status-bar.scanning {
+          border-color: rgba(93, 169, 255, 0.35);
           background: rgba(93, 169, 255, 0.08);
-          border: 1px solid rgba(93, 169, 255, 0.2);
           color: #5da9ff;
         }
-        .status-chip.scanning {
-          background: rgba(93, 169, 255, 0.12);
-          border: 1px solid rgba(93, 169, 255, 0.35);
-          color: #eef2fb;
-        }
-        .status-chip.success {
-          background: rgba(46, 213, 115, 0.12);
-          border: 1px solid rgba(46, 213, 115, 0.4);
+        .face-status-bar.success {
+          border-color: rgba(46, 213, 115, 0.4);
+          background: rgba(46, 213, 115, 0.1);
           color: #2ed573;
-          font-weight: 600;
         }
-        .status-chip.error {
-          background: rgba(255, 71, 87, 0.12);
-          border: 1px solid rgba(255, 71, 87, 0.4);
+        .face-status-bar.error {
+          border-color: rgba(255, 71, 87, 0.4);
+          background: rgba(255, 71, 87, 0.1);
           color: #ff4757;
         }
-        .face-footer-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          margin-top: 4px;
-        }
-        .btn-ghost-sec {
+        .btn-cancel-scan {
+          align-self: flex-end;
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.12);
-          color: #cdd4e6;
+          color: #9aa4bd;
           padding: 8px 16px;
           border-radius: 8px;
+          font-size: 12.5px;
           cursor: pointer;
-          font-size: 13px;
           transition: all 0.15s ease;
         }
-        .btn-ghost-sec:hover {
+        .btn-cancel-scan:hover {
+          color: #fff;
           background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-        }
-        .btn-primary-face {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          background: linear-gradient(135deg, #3a7bff, #ff2f8f);
-          border: none;
-          color: #fff;
-          padding: 8px 16px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 13px;
-          font-weight: 600;
-          box-shadow: 0 4px 14px rgba(58, 123, 255, 0.3);
-          transition: all 0.15s ease;
-        }
-        .btn-primary-face:hover {
-          box-shadow: 0 6px 20px rgba(255, 47, 143, 0.4);
-          transform: translateY(-1px);
         }
       `}</style>
 
       <div className="face-modal-card">
-        <div className="face-modal-header">
+        <div className="face-modal-head">
           <div className="face-modal-title">
             <ScanFace size={20} color="#5da9ff" />
-            <span>{mode === "enroll" ? "Biometric Face Enrollment" : "AI Face Recognition Sign-In"}</span>
+            <span>{mode === "enroll" ? "Enroll AI Face ID" : "AI Face Recognition Sign-In"}</span>
           </div>
-          <button className="face-modal-close" onClick={onClose}>
+          <button
+            onClick={() => {
+              stopCamera();
+              if (onClose) onClose();
+            }}
+            style={{ background: "none", border: "none", color: "#6b7488", cursor: "pointer" }}
+          >
             <X size={18} />
           </button>
         </div>
 
-        <div className="face-viewport">
-          <video ref={videoRef} autoPlay playsInline muted className="face-video" />
-          <canvas ref={canvasRef} className="face-canvas" />
-          <div className="face-grid-overlay" />
-          {cameraActive && !errorMsg && <div className="scan-laser" />}
-
+        <div className="face-viewfinder-wrap">
           {loadingModels && (
-            <div style={{ position: "absolute", color: "#5da9ff", display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, color: "#5da9ff" }}>
               <RefreshCw size={28} className="spin" />
-              <span>Loading AI Models...</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>Loading AI Models...</span>
             </div>
           )}
+
+          <video ref={videoRef} autoPlay playsInline muted className="face-video" />
+          <canvas ref={canvasRef} className="face-canvas" />
+
+          {cameraActive && statusType === "scanning" && <div className="face-scan-line" />}
         </div>
 
-        <div className="face-status-bar">
-          <div className={`status-chip ${statusType}`}>
-            {statusType === "success" && <CheckCircle2 size={16} />}
-            {statusType === "error" && <AlertTriangle size={16} />}
-            {statusType === "scanning" && <ScanFace size={16} className="pulse" />}
-            {statusType === "info" && <ShieldCheck size={16} />}
-            <span>{errorMsg || status}</span>
+        <div className="face-modal-footer">
+          <div className={`face-status-bar ${statusType}`}>
+            {statusType === "scanning" && <RefreshCw size={15} className="spin" />}
+            {statusType === "success" && <CheckCircle2 size={15} color="#2ed573" />}
+            {statusType === "error" && <AlertTriangle size={15} color="#ff4757" />}
+            {statusType === "info" && <ShieldCheck size={15} color="#5da9ff" />}
+            <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {errorMsg || status}
+            </span>
           </div>
 
-          <div className="face-footer-actions">
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             {errorMsg && (
-              <button className="btn-primary-face" onClick={handleRetry}>
-                <RefreshCw size={14} /> Retry Scan
+              <button
+                className="btn-cancel-scan"
+                onClick={handleRetry}
+                style={{ background: "rgba(93,169,255,0.15)", color: "#5da9ff", borderColor: "#5da9ff" }}
+              >
+                Retry
               </button>
             )}
-            <button className="btn-ghost-sec" onClick={onClose}>
+            <button
+              className="btn-cancel-scan"
+              onClick={() => {
+                stopCamera();
+                if (onClose) onClose();
+              }}
+            >
               Cancel
             </button>
           </div>
