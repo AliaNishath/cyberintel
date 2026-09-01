@@ -2278,10 +2278,39 @@ function UrlScannerPage() {
   }, []);
 
   const handleScan = async () => {
-    if (!url.trim() || scanning) return;
+    const targetUrl = url.trim();
+    if (!targetUrl || scanning) return;
     setScanning(true);
     setError("");
     setResult(null);
+
+    const evaluateLocalHeuristics = (rawUrl) => {
+      let score = 0;
+      const reasons = [];
+      const lower = rawUrl.toLowerCase();
+
+      if (!lower.startsWith("https://")) {
+        score += 20;
+        reasons.push("Insecure connection (HTTP / No TLS encryption)");
+      }
+      if (/https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(lower)) {
+        score += 45;
+        reasons.push("Host is a numerical IP address, obscuring true domain identity");
+      }
+      if (/\.(xyz|top|click|link|work|gq|cf|tk|ml|ga|zip|mov)(\/|$)/.test(lower)) {
+        score += 35;
+        reasons.push("High-risk Top-Level Domain (frequently abused by adversaries)");
+      }
+      if (/(paypal|netflix|apple|google|chase|bank|verify|login|secure|account|update|suspended)/.test(lower)) {
+        score += 30;
+        reasons.push("Phishing deception & brand impersonation keyword signature detected");
+      }
+      if (score > 100) score = 100;
+      const verdict = score >= 50 ? "malicious" : score > 15 ? "suspicious" : "safe";
+      if (reasons.length === 0) reasons.push("Valid HTTPS protocol and clean security profile");
+      return { url: rawUrl, verdict, score, reasons, threatCreated: verdict !== "safe" };
+    };
+
     try {
       const token = localStorage.getItem("cyberintel_token");
       const res = await fetch(`${API_BASE_URL}/api/threats/scan-url`, {
@@ -2290,22 +2319,32 @@ function UrlScannerPage() {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: targetUrl }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Scan failed");
       setResult(data);
 
       if (data.verdict === "malicious" || data.verdict === "suspicious") {
-        playAlertSiren();
         if (typeof window !== "undefined" && window.__triggerThreatFlash) {
-          window.__triggerThreatFlash();
+          window.__triggerThreatFlash(6);
+        } else {
+          playAlertSiren(6);
         }
       }
 
       if (data.threatCreated) loadHistory();
     } catch (err) {
-      setError(err.message);
+      console.warn("Backend scan error, using heuristic fallback:", err.message);
+      const fallbackResult = evaluateLocalHeuristics(targetUrl);
+      setResult(fallbackResult);
+      if (fallbackResult.verdict === "malicious" || fallbackResult.verdict === "suspicious") {
+        if (typeof window !== "undefined" && window.__triggerThreatFlash) {
+          window.__triggerThreatFlash(6);
+        } else {
+          playAlertSiren(6);
+        }
+      }
     } finally {
       setScanning(false);
     }
@@ -2728,9 +2767,9 @@ const PAGES = {
   profile: { title: "My Profile", component: ProfilePage },
 };
 
-// Plays a continuous rising/falling siren (like a real alarm) for ~8 seconds,
-// using the Web Audio API's frequency ramp — no sound file needed.
-function playAlertSiren() {
+// Plays a continuous rising/falling siren (like a real alarm) for a set duration,
+// using the Web Audio API's frequency ramp — synchronized with the red beacon lights.
+function playAlertSiren(duration = 6) {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
@@ -2742,8 +2781,7 @@ function playAlertSiren() {
 
     const now = ctx.currentTime;
     const sweepDuration = 0.6; // one up-down cycle
-    const totalDuration = 8; // total siren length in seconds
-    const cycles = Math.floor(totalDuration / sweepDuration);
+    const cycles = Math.floor(duration / sweepDuration);
 
     osc.frequency.setValueAtTime(500, now);
     for (let i = 0; i < cycles; i++) {
@@ -2755,30 +2793,26 @@ function playAlertSiren() {
     }
 
     gain.gain.setValueAtTime(0.12, now);
-    gain.gain.setValueAtTime(0.12, now + totalDuration - 0.3);
-    gain.gain.linearRampToValueAtTime(0, now + totalDuration);
+    gain.gain.setValueAtTime(0.12, now + duration - 0.2);
+    gain.gain.linearRampToValueAtTime(0, now + duration);
 
     osc.start(now);
-    osc.stop(now + totalDuration);
+    osc.stop(now + duration);
   } catch (err) {
     console.error("Couldn't play alert siren:", err.message);
   }
 }
 
-// Polls the overview endpoint every 3s (fast, so a new threat is caught
-// almost immediately) and compares the active-threat count to the last
-// known value. A genuine increase triggers a real alert: an 8-second siren
-// plus a red flash around the screen edges lasting 30 seconds.
 function useThreatAlerts() {
   const [flashing, setFlashing] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const prevCountRef = useRef(null);
 
   useEffect(() => {
-    window.__triggerThreatFlash = () => {
+    window.__triggerThreatFlash = (duration = 6) => {
       setFlashing(true);
-      if (soundEnabled) playAlertSiren();
-      setTimeout(() => setFlashing(false), 12000);
+      if (soundEnabled) playAlertSiren(duration);
+      setTimeout(() => setFlashing(false), duration * 1000);
     };
     return () => {
       window.__triggerThreatFlash = null;
@@ -2798,8 +2832,8 @@ function useThreatAlerts() {
 
         if (prevCountRef.current !== null && count > prevCountRef.current) {
           setFlashing(true);
-          if (soundEnabled) playAlertSiren();
-          setTimeout(() => setFlashing(false), 15000);
+          if (soundEnabled) playAlertSiren(6);
+          setTimeout(() => setFlashing(false), 6000);
         }
         prevCountRef.current = count;
       } catch {

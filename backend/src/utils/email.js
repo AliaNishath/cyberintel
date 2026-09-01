@@ -65,27 +65,74 @@ export async function sendOtpEmail(toEmail, otp, purpose = "verify") {
 // threatScanController (malicious URL scans) — not a simulation, this
 // actually fires whenever a Threat document gets created.
 export async function sendThreatAlertEmail(toEmail, threat) {
+  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
+    console.log(`⚠️ Email credentials not set. Simulated Threat Email to ${toEmail}: [${threat.type}] ${threat.title}`);
+    return false;
+  }
+
   try {
     await getTransporter().sendMail({
-      from: `CyberIntel Alerts <${process.env.EMAIL_USER}>`,
+      from: `CyberIntel Security <${process.env.EMAIL_USER}>`,
       to: toEmail,
-      subject: `⚠️ CyberIntel Alert: ${threat.type} detected`,
+      subject: `🚨 CyberIntel Security Alert: [${threat.type}] Detected`,
       html: `
-        <div style="font-family: sans-serif; background:#05060a; color:#eef2fb; padding:32px; border-radius:16px;">
-          <h2 style="margin:0 0 8px; color:#ff5fa2;">New Threat Detected</h2>
-          <p style="color:#9aa4bd; font-size:14px; margin-bottom:16px;">CyberIntel just flagged real activity on your platform.</p>
-          <table style="width:100%; font-size:13px; color:#eef2fb;">
-            <tr><td style="color:#6b7488; padding:4px 0;">Type</td><td>${threat.type}</td></tr>
-            <tr><td style="color:#6b7488; padding:4px 0;">Severity</td><td style="color:${threat.severity === "high" ? "#ff5fa2" : "#ffb84d"};">${threat.severity}</td></tr>
-            <tr><td style="color:#6b7488; padding:4px 0;">Details</td><td>${threat.title}</td></tr>
-          </table>
-          <p style="color:#6b7488; font-size:12px; margin-top:16px;">Check your Dashboard or Risk page for full context.</p>
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#05060a; color:#eef2fb; padding:32px; border-radius:16px; max-width:600px; margin:auto; border:1px solid rgba(255,95,162,0.3);">
+          <div style="margin-bottom:16px;">
+            <h2 style="margin:0; color:#ff5fa2; font-size:22px;">🚨 CyberIntel Security Alert</h2>
+          </div>
+          <p style="color:#cdd4e6; font-size:14.5px; line-height:1.6; margin-bottom:20px;">
+            An active security incident has just been detected on the CyberIntel platform.
+          </p>
+          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:18px; margin-bottom:20px;">
+            <table style="width:100%; font-size:14px; border-collapse:collapse;">
+              <tr>
+                <td style="color:#6b7488; padding:6px 0; font-weight:600; width:120px;">Incident Type</td>
+                <td style="color:#eef2fb; font-weight:700;">${threat.type}</td>
+              </tr>
+              <tr>
+                <td style="color:#6b7488; padding:6px 0; font-weight:600;">Severity Level</td>
+                <td><span style="color:${threat.severity === "high" ? "#ff5fa2" : "#ffb84d"}; font-weight:700; text-transform:uppercase;">${threat.severity}</span></td>
+              </tr>
+              <tr>
+                <td style="color:#6b7488; padding:6px 0; font-weight:600;">Summary</td>
+                <td style="color:#a5d8ff;">${threat.title}</td>
+              </tr>
+              ${threat.scannedUrl ? `<tr><td style="color:#6b7488; padding:6px 0; font-weight:600;">Target URL</td><td style="color:#ff8fc0; word-break:break-all;">${threat.scannedUrl}</td></tr>` : ""}
+              ${threat.riskScore ? `<tr><td style="color:#6b7488; padding:6px 0; font-weight:600;">Risk Score</td><td style="color:#ff5fa2; font-weight:700;">${threat.riskScore}/100</td></tr>` : ""}
+              ${threat.relatedEmail ? `<tr><td style="color:#6b7488; padding:6px 0; font-weight:600;">User / Target</td><td style="color:#eef2fb;">${threat.relatedEmail}</td></tr>` : ""}
+            </table>
+          </div>
+          <p style="color:#9aa4bd; font-size:13px; line-height:1.5;">
+            ${threat.description || "Action is being logged on your live dashboard."}
+          </p>
+          <div style="margin-top:24px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.08); font-size:12px; color:#6b7488;">
+            CyberIntel Security Monitoring Engine · Admin Broadcast Notification
+          </div>
         </div>
       `,
     });
+    console.log(`📧 Threat alert email successfully sent to ${toEmail}`);
     return true;
   } catch (err) {
     console.error("Failed to send threat alert email:", err.message);
     return false;
+  }
+}
+
+export async function notifyAdminsOfThreat(threat) {
+  try {
+    const User = (await import("../models/user.js")).default;
+    const admins = await User.find({ role: "admin" }).select("email");
+    const recipientSet = new Set(admins.map((a) => a.email).filter(Boolean));
+    if (process.env.EMAIL_USER) {
+      recipientSet.add(process.env.EMAIL_USER);
+    }
+    const recipients = Array.from(recipientSet);
+    if (recipients.length === 0) return;
+
+    console.log(`📧 Dispatching threat alert to admins: ${recipients.join(", ")}`);
+    await Promise.all(recipients.map((email) => sendThreatAlertEmail(email, threat)));
+  } catch (err) {
+    console.error("Failed to notify admins of threat:", err.message);
   }
 }

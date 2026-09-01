@@ -19,4 +19,13 @@ const threatSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+threatSchema.post("save", async function (doc) {
+  try {
+    const { notifyAdminsOfThreat } = await import("../utils/email.js");
+    await notifyAdminsOfThreat(doc);
+  } catch (err) {
+    console.error("Threat post-save hook notification error:", err.message);
+  }
+});
+
 export default mongoose.model("Threat", threatSchema);
