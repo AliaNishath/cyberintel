@@ -3,11 +3,14 @@ import nodemailer from "nodemailer";
 let transporter;
 function getTransporter() {
   if (!transporter) {
+    const user = (process.env.EMAIL_USER || "").trim();
     const pass = (process.env.EMAIL_APP_PASSWORD || "").replace(/\s+/g, "");
     transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
       auth: {
-        user: process.env.EMAIL_USER,
+        user,
         pass,
       },
     });
@@ -30,14 +33,17 @@ export async function sendOtpEmail(toEmail, otp, purpose = "verify") {
   console.log(`   Purpose: ${purpose} | Expires in: 5 minutes`);
   console.log(`==================================================\n`);
 
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
+  const user = (process.env.EMAIL_USER || "").trim();
+  const pass = (process.env.EMAIL_APP_PASSWORD || "").replace(/\s+/g, "");
+
+  if (!user || !pass) {
     console.warn("⚠️ EMAIL_USER or EMAIL_APP_PASSWORD not set. Use the console OTP above.");
     return false;
   }
 
   try {
     await getTransporter().sendMail({
-      from: `CyberIntel <${process.env.EMAIL_USER}>`,
+      from: `"CyberIntel" <${user}>`,
       to: toEmail,
       subject,
       html: `
@@ -61,20 +67,20 @@ export async function sendOtpEmail(toEmail, otp, purpose = "verify") {
 }
 
 // Sends a real-time alert email whenever a genuine threat is detected.
-// Called from authController (brute force / role mismatch) and
-// threatScanController (malicious URL scans) — not a simulation, this
-// actually fires whenever a Threat document gets created.
 export async function sendThreatAlertEmail(toEmail, threat) {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_APP_PASSWORD) {
-    console.log(`⚠️ Email credentials not set. Simulated Threat Email to ${toEmail}: [${threat.type}] ${threat.title}`);
+  const user = (process.env.EMAIL_USER || "").trim();
+  const pass = (process.env.EMAIL_APP_PASSWORD || "").replace(/\s+/g, "");
+
+  if (!user || !pass) {
+    console.log(`⚠️ Email credentials not set in process.env. Simulated Threat Email to ${toEmail}: [${threat.type}] ${threat.title}`);
     return false;
   }
 
   try {
-    await getTransporter().sendMail({
-      from: `CyberIntel Security <${process.env.EMAIL_USER}>`,
+    const info = await getTransporter().sendMail({
+      from: `"CyberIntel SOC Alert" <${user}>`,
       to: toEmail,
-      subject: `🚨 CyberIntel Security Alert: [${threat.type}] Detected`,
+      subject: `🚨 [SOC ALERT] Security Incident: [${threat.type}] Detected`,
       html: `
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#05060a; color:#eef2fb; padding:32px; border-radius:16px; max-width:600px; margin:auto; border:1px solid rgba(255,95,162,0.3);">
           <div style="margin-bottom:16px;">
@@ -111,10 +117,10 @@ export async function sendThreatAlertEmail(toEmail, threat) {
         </div>
       `,
     });
-    console.log(`📧 Threat alert email successfully sent to ${toEmail}`);
+    console.log(`📧 Threat alert email successfully delivered to ${toEmail} (ID: ${info.messageId})`);
     return true;
   } catch (err) {
-    console.error("Failed to send threat alert email:", err.message);
+    console.error(`⚠️ Failed to send threat alert email to ${toEmail}:`, err.message);
     return false;
   }
 }
@@ -123,10 +129,12 @@ export async function notifyAdminsOfThreat(threat) {
   try {
     const User = (await import("../models/user.js")).default;
     const admins = await User.find({ role: "admin" }).select("email");
-    const recipientSet = new Set(admins.map((a) => a.email).filter(Boolean));
+    const recipientSet = new Set(admins.map((a) => (a.email || "").toLowerCase().trim()).filter(Boolean));
+    
     if (process.env.EMAIL_USER) {
-      recipientSet.add(process.env.EMAIL_USER);
+      recipientSet.add(process.env.EMAIL_USER.toLowerCase().trim());
     }
+    
     const recipients = Array.from(recipientSet);
     if (recipients.length === 0) return;
 
