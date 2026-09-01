@@ -2814,7 +2814,6 @@ function playAlertSiren(duration = 6) {
 function useThreatAlerts() {
   const [flashing, setFlashing] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const prevCountRef = useRef(null);
 
   useEffect(() => {
     window.__triggerThreatFlash = (duration = 6) => {
@@ -2825,33 +2824,6 @@ function useThreatAlerts() {
     return () => {
       window.__triggerThreatFlash = null;
     };
-  }, [soundEnabled]);
-
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const token = localStorage.getItem("cyberintel_token");
-        const res = await fetch(`${API_BASE_URL}/api/dashboard/overview`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        const data = await res.json();
-        const count = data?.stats?.activeThreats;
-        if (typeof count !== "number") return;
-
-        if (prevCountRef.current !== null && count > prevCountRef.current) {
-          setFlashing(true);
-          if (soundEnabled) playAlertSiren(6);
-          setTimeout(() => setFlashing(false), 6000);
-        }
-        prevCountRef.current = count;
-      } catch {
-        // Silently skip a failed poll — don't spam errors for a background check
-      }
-    };
-
-    poll();
-    const interval = setInterval(poll, 3000);
-    return () => clearInterval(interval);
   }, [soundEnabled]);
 
   return { flashing, soundEnabled, setSoundEnabled };

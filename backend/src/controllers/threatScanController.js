@@ -66,7 +66,13 @@ export async function scanUrl(req, res) {
 // GET /api/threats/scan-history
 export async function getScanHistory(req, res) {
   try {
-    const scans = await Threat.find({ type: "Malicious URL" }).sort({ createdAt: -1 }).limit(20);
+    const userEmail = req.user?.email;
+    const filter = { type: "Malicious URL" };
+    if (userEmail) {
+      filter.relatedEmail = userEmail;
+    }
+
+    const scans = await Threat.find(filter).sort({ createdAt: -1 }).limit(20);
     res.json({
       scans: scans.map((s) => ({
         url: s.scannedUrl,
