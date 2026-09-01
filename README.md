@@ -1,6 +1,6 @@
-# CyberIntel
+﻿# CyberIntel
 
-A unified cybersecurity intelligence platform — final-year major project by **Aliya Nishath**, **Varshini**, and **Ashraf**, Cybersecurity undergraduate students.
+A unified cybersecurity intelligence platform — built by **Aliya Nishath**, Final Year Cybersecurity Student (2026–2027).
 
 CyberIntel combines biometric authentication, AI-driven threat detection, real-time monitoring, and risk analysis into a single console, with a Suspicious Web Threat Detection module as an enhancement on top of the original mini-project.
 
@@ -83,8 +83,8 @@ cyberintel/
 │       ├── pages/
 │       │   ├── LandingPage.jsx
 │       │   ├── AuthPages.jsx
-│       │   ├── DashboardApp.jsx        (Dashboard + all 6 modules)
-│       │   └── PublicInfoPage.jsx      (About/Users/Builders/Goal, no login needed)
+│       │   ├── DashboardApp.jsx        (Dashboard + all modules)
+│       │   └── PublicInfoPage.jsx      (About/Users/Builders/Goal)
 │       └── components/
 │           └── AiChatWidget.jsx
 │
@@ -96,7 +96,7 @@ cyberintel/
         │   └── Threat.js
         ├── controllers/
         │   ├── authController.js       (signup, OTP, login, role promotion)
-        │   ├── dashboardController.js  (real data for all 6 modules)
+        │   ├── dashboardController.js  (real data for all modules)
         │   ├── threatScanController.js (URL threat scanner)
         │   └── assistantController.js  (RAG-grounded AI chat)
         ├── services/
@@ -118,14 +118,15 @@ cyberintel/
 4. **Real-Time Monitoring & Alerts** — Live alert feed, audio sirens, and red flash notifications.
 5. **Security Dashboard & Reports** — Aggregated threat metrics over time with exportable audit reports.
 6. **URL Threat Scanner** *(enhancement module)* — Heuristic detection engine checking for phishing, brand impersonation, risky TLDs, and IP URLs.
+7. **AI Cyber Duel Arena** — Real-time adversarial Red vs. Blue team wargaming simulator with MITRE ATT&CK integration and plain-language ELI5 translation.
 
 ### Newly Added Cyber Security Tools & Intelligence
-7. **Data Leak & Account Breach Checker** — Live lookup checking if emails/accounts have surfaced in 15+ billion compromised records, with risk scoring, exposed data class breakdowns, and immediate remediation workflows.
-8. **Pwned Passwords Zero-Knowledge Scanner** — Implementation of HaveIBeenPwned's k-Anonymity SHA-1 hash prefix protocol (100% privacy-preserving, zero plain password transmission) + NIST SP 800-63B entropy calculator & crack time estimator.
-9. **Verified Breach Detection Websites Directory** — Curated intelligence hub profiling the top 10 verified leak detection websites (Have I Been Pwned, XposedOrNot, DeHashed, Intelligence X, Hudson Rock Cavalier, Leak-Lookup, Mozilla Monitor, BreachDirectory, Snusbase, Google Password Checkup) with live filter and direct query launch buttons.
-10. **HTTP Security Headers & SSL Posture Analyzer** — Inspects web applications for HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, with security grade (A+ to F) and copy-paste remediation directives.
-11. **IP Address & Threat Investigator** — Live IP OSINT lookup returning ASN routing, Geolocation, Tor Exit Node indicators, VPN/Hosting proxies, and threat confidence scores.
-12. **SOC Incident Response Playbooks** — Interactive NIST SP 800-61r2 standardized triage workflows for Account Takeover (ATO), Phishing, Ransomware Containment, and Data Exfiltration.
+8. **Data Leak & Account Breach Checker** — Live lookup checking if emails/accounts have surfaced in 15+ billion compromised records, with risk scoring, exposed data class breakdowns, and immediate remediation workflows.
+9. **Pwned Passwords Zero-Knowledge Scanner** — Implementation of HaveIBeenPwned's k-Anonymity SHA-1 hash prefix protocol (100% privacy-preserving, zero plain password transmission) + NIST SP 800-63B entropy calculator & crack time estimator.
+10. **Verified Breach Detection Websites Directory** — Curated intelligence hub profiling the top 10 verified leak detection websites (Have I Been Pwned, XposedOrNot, DeHashed, Intelligence X, Hudson Rock Cavalier, Leak-Lookup, Mozilla Monitor, BreachDirectory, Snusbase, Google Password Checkup) with live filter and direct query launch buttons.
+11. **HTTP Security Headers & SSL Posture Analyzer** — Inspects web applications for HSTS, CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy, with security grade (A+ to F) and copy-paste remediation directives.
+12. **IP Address & Threat Investigator** — Live IP OSINT lookup returning ASN routing, Geolocation, Tor Exit Node indicators, VPN/Hosting proxies, and threat confidence scores.
+13. **SOC Incident Response Playbooks** — Interactive NIST SP 800-61r2 standardized triage workflows for Account Takeover (ATO), Phishing, Ransomware Containment, and Data Exfiltration.
 
 ---
 
@@ -159,6 +160,9 @@ Visit `http://localhost:5173`.
 
 ---
 
-## Built By
+## 👩‍💻 Author & Developer
 
-Aliya Nishath, Varshini, and Ashraf — Cybersecurity students, final-year major project, 2026–2027.
+**Built by Aliya Nishath** — Final Year Cybersecurity Student (2026–2027)
+
+- 💼 **LinkedIn**: [linkedin.com/in/aliya-nishath-82a6b2375](https://www.linkedin.com/in/aliya-nishath-82a6b2375/)
+- 🐙 **GitHub**: [@AliaNishath](https://github.com/AliaNishath)
