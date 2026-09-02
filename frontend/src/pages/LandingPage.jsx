@@ -374,7 +374,7 @@ function Hero() {
 function Features() {
   return (
     <section className="section">
-      <div className="section-head">
+      <div className="section-head center">
         <div className="eyebrow eyebrow-alt">CORE MODULES</div>
         <h2>Five systems. One shield.</h2>
         <p>Every module below feeds the same intelligence engine and the same dashboard.</p>
@@ -678,6 +678,18 @@ export default function App() {
 
         .section { max-width: 1180px; margin: 0 auto; padding: 90px 24px; position: relative; z-index: 2; }
         .section-head { max-width: 640px; margin-bottom: 48px; }
+        .section-head.center {
+          max-width: 720px;
+          margin: 0 auto 52px auto;
+          text-align: center;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        .section-head.center .eyebrow {
+          margin-left: auto;
+          margin-right: auto;
+        }
         .section-head h2 { font-size: 32px; margin: 14px 0 10px; letter-spacing: -0.01em; }
         .section-head p { color: #9aa4bd; font-size: 15px; line-height: 1.6; }
 
