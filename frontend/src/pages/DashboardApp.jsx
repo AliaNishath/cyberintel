@@ -169,6 +169,7 @@ const NAV_GROUPS = [
       { key: "threat-map", label: "3D Global Threat Map", icon: Globe },
       { key: "cyber-duel", label: "AI Cyber Duel Arena", icon: Swords },
       { key: "ai-threat", label: "AI Threat Detection", icon: Cpu },
+      { key: "intel-monitoring", label: "Threat Intel & Monitoring", icon: Radar },
       { key: "reports", label: "Reports", icon: BarChart3 },
     ],
   },
@@ -1583,6 +1584,168 @@ function MonitoringPage() {
   );
 }
 
+/* ---------------------------- Unified Threat Intel & Monitoring Page ---------------------------- */
+function ThreatIntelAndMonitoringPage() {
+  const [pulse, setPulse] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setPulse((p) => (p + 1) % 100), 1200);
+    return () => clearInterval(t);
+  }, []);
+
+  const riskFallback = {
+    orgRiskScore: 72,
+    topCategories: [
+      { name: "Exposed credentials", count: 18 },
+      { name: "Unpatched services", count: 12 },
+      { name: "Misconfigured access", count: 9 },
+      { name: "Third-party risk", count: 6 },
+      { name: "Weak password policies", count: 5 },
+      { name: "Unmonitored shadow IT", count: 4 },
+    ],
+    riskByDept: riskByDeptData,
+    globalIntelFeed: [
+      { text: "New CVE affecting exposed VPN endpoints", time: "18m ago" },
+      { text: "Threat actor group activity increased in APAC region", time: "1h ago" },
+      { text: "Phishing campaign impersonating internal IT detected", time: "3h ago" },
+    ],
+  };
+
+  const monFallback = {
+    stats: { liveConnections: 3842, endpointsOnline: 1190, endpointsTotal: 1204, alertsLastHour: 7, avgResponseTime: 1.4 },
+    connectionsLastHour: connectionsData,
+    activeAlerts: [
+      { text: "Endpoint WKSTN-042 disconnected unexpectedly", time: "now" },
+      { text: "Firewall rule triggered on 10.0.2.8", time: "3m ago" },
+      { text: "Scheduled scan completed on all servers", time: "12m ago" },
+    ],
+  };
+
+  const { data: riskData, isLive: riskLive } = useDashboardData("risk", riskFallback);
+  const { data: monData, isLive: monLive } = useDashboardData("monitoring", monFallback);
+  const s = monData.stats;
+
+  return (
+    <>
+      <PageIntro
+        eyebrow="UNIFIED THREAT INTELLIGENCE & TELEMETRY"
+        tagline="Live endpoint telemetry, network heartbeat pulse, and mathematical organizational risk scoring combined into one real-time command view."
+      />
+
+      <TipCallout icon={Radar} title="Unified SOC Mission Control">
+        This single interface connects our mathematical risk scoring engine with live packet and endpoint telemetry.
+        The score tells you your exposure vulnerability, while the live pulse watches for active attacks in progress.
+        <LiveBadge isLive={riskLive || monLive} />
+      </TipCallout>
+
+      <div className="stat-grid">
+        <StatCard icon={Wifi} label="Live Connections" value={s.liveConnections?.toLocaleString()} tone="blue" />
+        <StatCard icon={Monitor} label="Endpoints Online" value={`${s.endpointsOnline} / ${s.endpointsTotal}`} tone="blue" />
+        <StatCard icon={AlertTriangle} label="Alerts Last Hour" value={s.alertsLastHour} tone="pink" />
+        <StatCard icon={Activity} label="Avg Response Time" value={`${s.avgResponseTime}s`} tone="pink" />
+        <StatCard icon={TrendingUp} label="Bandwidth Usage" value="68%" tone="blue" />
+        <StatCard icon={Globe} label="Regions Monitored" value="14" tone="pink" />
+      </div>
+
+      <div className="grid-2">
+        <Panel title="Organization Risk Score">
+          <div className="ring-wrap">
+            <div className="ring big danger">
+              <div className="ring-inner">
+                <div className="ring-num">{riskData.orgRiskScore}</div>
+                <div className="ring-label">of 100</div>
+              </div>
+            </div>
+          </div>
+          <div style={{ textAlign: "center", marginTop: 14, fontSize: 13, color: "#ff8fc0", fontWeight: 600 }}>
+            Status: ELEVATED THREAT EXPOSURE (Active Monitoring)
+          </div>
+        </Panel>
+
+        <Panel title={`Live Network Pulse ${pulse % 2 === 0 ? "\u25CF" : "\u25CB"}`}>
+          <div className="pulse-bars">
+            {Array.from({ length: 40 }).map((_, i) => (
+              <span
+                key={i}
+                className="pulse-bar"
+                style={{ height: `${20 + ((i * 13 + pulse * 7) % 60)}px` }}
+              />
+            ))}
+          </div>
+        </Panel>
+      </div>
+
+      <div className="grid-2">
+        <Panel title="Traffic Flow & Connections (Last Hour)">
+          <ResponsiveContainer width="100%" height={210}>
+            <AreaChart data={monData.connectionsLastHour}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="time" stroke="#6b7488" fontSize={12} />
+              <YAxis stroke="#6b7488" fontSize={12} />
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              <Area type="monotone" dataKey="connections" stroke="#ff5fa2" fill="rgba(255,95,162,0.18)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Panel>
+
+        <Panel title="Risk Score by Department">
+          <ResponsiveContainer width="100%" height={210}>
+            <BarChart data={riskData.riskByDept} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis type="number" stroke="#6b7488" fontSize={12} domain={[0, 100]} />
+              <YAxis type="category" dataKey="dept" stroke="#6b7488" fontSize={12} width={80} />
+              <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+              <Bar dataKey="risk" fill="#5da9ff" radius={[0, 6, 6, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Panel>
+      </div>
+
+      <div className="grid-2">
+        <Panel title="Top Risk Categories">
+          <ul className="cat-list">
+            {riskData.topCategories.map((c, i) => (
+              <li key={c.name}>
+                <span className={`dot ${i % 2 === 0 ? "pink" : "blue"}`} />
+                {c.name} <b>{c.count}</b>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+
+        <Panel title="Global Threat Intelligence Feed">
+          <ul className="activity-list">
+            {riskData.globalIntelFeed.map((f, i) => (
+              <li key={i}>
+                <span className={`dot ${i % 2 === 0 ? "pink" : "blue"}`} /> {f.text} <span className="time">{f.time}</span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      </div>
+
+      <Panel title="Active Alerts & Defensive Dispatch">
+        <ul className="activity-list">
+          {monData.activeAlerts.map((a, i) => (
+            <li key={i}>
+              <span className={`dot ${i % 2 === 0 ? "pink" : "blue"}`} /> {a.text} <span className="time">{a.time}</span>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+
+      <TipCallout icon={Radar} title="Mathematical Risk Scoring Model">
+        Our organizational risk index dynamically factors in:
+        <b> Risk = w₁(Exposed Credentials) + w₂(Anomalous Logins) + w₃(Unpatched CVEs) + w₄(Open Attack Surface)</b>.
+        The score shifts continuously based on real-time incident telemetry.
+      </TipCallout>
+
+      <VibeLine icon={Zap}>
+        Real-time telemetry and mathematical risk modeling in one screen. Total situational awareness.
+      </VibeLine>
+    </>
+  );
+}
+
 /* ---------------------------- Reports page ---------------------------- */
 function downloadCsv(filename, headers, rows) {
   const csvLines = [headers.join(",")];
@@ -2842,6 +3005,9 @@ const PAGES = {
   "threat-map": { title: "3D Global Threat Matrix", component: GlobalThreatMapPage },
   "cyber-duel": { title: "AI Cyber Duel Arena (Red vs. Blue)", component: CyberDuelArenaPage },
   "ai-threat": { title: "AI Threat Detection", component: AiThreatPage },
+  "intel-monitoring": { title: "Threat Intel & Live Monitoring", component: ThreatIntelAndMonitoringPage },
+  risk: { title: "Threat Intelligence & Risk", component: ThreatIntelAndMonitoringPage },
+  monitoring: { title: "Real-Time Monitoring", component: ThreatIntelAndMonitoringPage },
   "url-scanner": { title: "URL Threat Scanner", component: UrlScannerPage },
   "breach-checker": { title: "Data Leak & Account Breach Checker", component: BreachCheckerPage },
   "security-headers": { title: "HTTP Security Headers & SSL Posture", component: SecurityHeadersPage },
