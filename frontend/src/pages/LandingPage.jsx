@@ -69,11 +69,6 @@ const FEATURES = [
     title: "Threat Intelligence & Risk Analysis",
     desc: "Correlated global threat feeds turn raw signals into a ranked, actionable risk picture for your systems.",
   },
-  {
-    icon: Activity,
-    title: "Real-Time Monitoring & Alerts",
-    desc: "Live telemetry across every endpoint, with alerts routed the moment something looks wrong.",
-  },
 ];
 
 const STEPS = [
@@ -376,7 +371,7 @@ function Features() {
     <section className="section">
       <div className="section-head center">
         <div className="eyebrow eyebrow-alt">CORE MODULES</div>
-        <h2>Six systems. One shield.</h2>
+        <h2>Five systems. One shield.</h2>
         <p>Every module below feeds the same intelligence engine and the same dashboard.</p>
       </div>
 
@@ -796,35 +791,65 @@ export default function App() {
         /* ---------- features ---------- */
         .feature-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 22px;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 16px;
+          align-items: stretch;
         }
-        @media (max-width: 960px) {
+        @media (max-width: 1100px) {
+          .feature-grid {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+        @media (max-width: 768px) {
           .feature-grid {
             grid-template-columns: repeat(2, 1fr);
           }
         }
-        @media (max-width: 600px) {
+        @media (max-width: 520px) {
           .feature-grid {
             grid-template-columns: 1fr;
           }
         }
         .feature-card {
-          background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-          border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 26px 24px;
-          display: flex; flex-direction: column;
+          background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 18px;
+          padding: 26px 20px;
+          display: flex;
+          flex-direction: column;
+          min-height: 350px;
           transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .feature-card:hover {
           transform: translateY(-4px);
           border-color: rgba(93,169,255,0.4);
-          box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+          box-shadow: 0 14px 32px rgba(0,0,0,0.45);
         }
-        .feature-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+        .feature-icon {
+          width: 44px;
+          height: 44px;
+          min-width: 44px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 20px;
+        }
         .feature-icon.blue { background: rgba(93,169,255,0.12); color: #7cbaff; }
         .feature-icon.pink { background: rgba(255,95,162,0.12); color: #ff8fc0; }
-        .feature-card h3 { font-size: 17px; margin-bottom: 10px; font-weight: 700; color: #eef2fb; }
-        .feature-card p { font-size: 14px; color: #9aa4bd; line-height: 1.6; flex: 1; }
+        .feature-card h3 {
+          font-size: 16px;
+          line-height: 1.35;
+          margin-bottom: 12px;
+          font-weight: 700;
+          color: #eef2fb;
+        }
+        .feature-card p {
+          font-size: 13.5px;
+          color: #9aa4bd;
+          line-height: 1.6;
+          flex: 1;
+        }
 
         /* ---------- dashboard mock ---------- */
         .dash-mock {
