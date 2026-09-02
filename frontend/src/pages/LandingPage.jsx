@@ -23,6 +23,8 @@ import {
   ScanFace,
   Database,
   ShieldAlert,
+  Globe,
+  Zap,
 } from "lucide-react";
 import LanguageSelector from "../components/LanguageSelector.jsx";
 
@@ -46,18 +48,18 @@ const NAV_MENUS = {
 const FEATURES = [
   {
     icon: Database,
-    title: "Data Leak & Account Breach Checker",
+    title: "Data Leak & Breach Checker",
     desc: "Scan personal and corporate accounts across 15+ billion exposed credentials, evaluate exposure risk, and verify pwned passwords with zero-knowledge k-Anonymity.",
   },
   {
     icon: ScanFace,
-    title: "Biometric WebAuthn Passkeys",
-    desc: "Face ID, fingerprint, and Windows Hello sign-in that replaces fragile passwords with genuine cryptographic passkeys.",
+    title: "Biometric WebAuthn & AI Face ID",
+    desc: "Face ID, fingerprint, and FIDO2 passkeys replacing passwords with cryptographic hardware tokens and neural biometrics.",
   },
   {
     icon: Cpu,
-    title: "AI-Based Threat Detection",
-    desc: "Machine learning models score every event in real time, flagging anomalies before they become incidents.",
+    title: "AI URL Threat Scanner",
+    desc: "Instant 0ms heuristic threat evaluation, brand impersonation detection, and zero-day phishing analysis with plain-language ELI5 explanations.",
   },
   {
     icon: ShieldAlert,
@@ -65,9 +67,14 @@ const FEATURES = [
     desc: "Audit HTTP defense headers (HSTS, CSP, X-Frame-Options) and inspect SSL configurations with instant remediation code.",
   },
   {
-    icon: Radar,
-    title: "Threat Intelligence & Risk Analysis",
-    desc: "Correlated global threat feeds turn raw signals into a ranked, actionable risk picture for your systems.",
+    icon: Globe,
+    title: "3D Global Threat Matrix",
+    desc: "Live spherical 3D visualizer calculating real-time attack trajectories and volumetric DDoS vectors across global security hubs at 60 FPS.",
+  },
+  {
+    icon: Zap,
+    title: "AI Cyber Duel Arena (Red vs Blue)",
+    desc: "Simulate autonomous offensive adversary tactics against defensive AI agents with dynamic MITRE ATT&CK kill-chain mapping.",
   },
 ];
 
@@ -370,9 +377,9 @@ function Features() {
   return (
     <section className="section">
       <div className="section-head center">
-        <div className="eyebrow eyebrow-alt">CORE MODULES</div>
-        <h2>Five systems. One shield.</h2>
-        <p>Every module below feeds the same intelligence engine and the same dashboard.</p>
+        <div className="eyebrow eyebrow-alt">CORE ARCHITECTURE</div>
+        <h2>Six systems. One shield.</h2>
+        <p>Six interconnected intelligence engines feeding the same real-time Zero-Trust SOC dashboard.</p>
       </div>
 
       <div className="feature-grid">
@@ -791,33 +798,36 @@ export default function App() {
         /* ---------- features ---------- */
         .feature-grid {
           display: grid;
-          grid-template-columns: repeat(5, 1fr);
-          gap: 16px;
+          grid-template-columns: repeat(6, 1fr);
+          gap: 14px;
           align-items: stretch;
         }
-        @media (max-width: 1100px) {
+        @media (max-width: 1220px) {
           .feature-grid {
             grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
           }
         }
         @media (max-width: 768px) {
           .feature-grid {
             grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
           }
         }
-        @media (max-width: 520px) {
+        @media (max-width: 480px) {
           .feature-grid {
             grid-template-columns: 1fr;
+            gap: 14px;
           }
         }
         .feature-card {
           background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 18px;
-          padding: 26px 20px;
+          padding: 24px 16px;
           display: flex;
           flex-direction: column;
-          min-height: 350px;
+          min-height: 380px;
           transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .feature-card:hover {
@@ -826,26 +836,26 @@ export default function App() {
           box-shadow: 0 14px 32px rgba(0,0,0,0.45);
         }
         .feature-icon {
-          width: 44px;
-          height: 44px;
-          min-width: 44px;
+          width: 42px;
+          height: 42px;
+          min-width: 42px;
           border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 20px;
+          margin-bottom: 18px;
         }
         .feature-icon.blue { background: rgba(93,169,255,0.12); color: #7cbaff; }
         .feature-icon.pink { background: rgba(255,95,162,0.12); color: #ff8fc0; }
         .feature-card h3 {
-          font-size: 16px;
+          font-size: 15px;
           line-height: 1.35;
           margin-bottom: 12px;
           font-weight: 700;
           color: #eef2fb;
         }
         .feature-card p {
-          font-size: 13.5px;
+          font-size: 12.5px;
           color: #9aa4bd;
           line-height: 1.6;
           flex: 1;
