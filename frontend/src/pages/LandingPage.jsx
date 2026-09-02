@@ -47,11 +47,6 @@ const NAV_MENUS = {
 
 const FEATURES = [
   {
-    icon: Database,
-    title: "Data Leak & Breach Checker",
-    desc: "Scan personal and corporate accounts across 15+ billion exposed credentials, evaluate exposure risk, and verify pwned passwords with zero-knowledge k-Anonymity.",
-  },
-  {
     icon: ScanFace,
     title: "Biometric WebAuthn & Passkey ID",
     desc: "Face ID, fingerprint, and FIDO2 passkeys replacing passwords with genuine cryptographic passkeys and neural face recognition.",
@@ -62,14 +57,19 @@ const FEATURES = [
     desc: "Instant 0ms heuristic threat evaluation, brand impersonation detection, and zero-day phishing analysis with plain-language ELI5 explanations.",
   },
   {
+    icon: Radar,
+    title: "Threat Intelligence & Risk",
+    desc: "Correlated threat feeds turn raw signals into a ranked, actionable risk picture for your systems using a weighted mathematical scoring algorithm.",
+  },
+  {
     icon: ShieldAlert,
     title: "Security Headers & Posture Analyzer",
     desc: "Audit HTTP defense headers (HSTS, CSP, X-Frame-Options) and inspect SSL configurations with instant remediation code.",
   },
   {
-    icon: Radar,
-    title: "Threat Intelligence & Risk",
-    desc: "Correlated threat feeds turn raw signals into a ranked, actionable risk picture for your systems using a weighted mathematical scoring algorithm.",
+    icon: Database,
+    title: "Data Leak & Breach Checker",
+    desc: "Scan personal and corporate accounts across 15+ billion exposed credentials, evaluate exposure risk, and verify pwned passwords with zero-knowledge k-Anonymity.",
   },
   {
     icon: Activity,
@@ -799,61 +799,65 @@ export default function App() {
         .feature-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 24px;
-          max-width: 1140px;
+          gap: 28px;
+          max-width: 1040px;
           margin: 0 auto;
           align-items: stretch;
         }
         @media (max-width: 960px) {
           .feature-grid {
             grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
+            gap: 22px;
+            max-width: 720px;
           }
         }
         @media (max-width: 580px) {
           .feature-grid {
             grid-template-columns: 1fr;
-            gap: 16px;
+            gap: 18px;
+            max-width: 380px;
           }
         }
         .feature-card {
-          background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
-          border: 1px solid rgba(255,255,255,0.08);
-          border-radius: 18px;
-          padding: 28px 24px;
+          background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+          border: 1px solid rgba(255,255,255,0.09);
+          border-radius: 22px;
+          padding: 42px 30px 38px;
           display: flex;
           flex-direction: column;
-          min-height: 270px;
-          transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+          min-height: 410px;
+          box-shadow: 0 16px 36px rgba(0,0,0,0.35);
+          transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
         }
         .feature-card:hover {
-          transform: translateY(-4px);
-          border-color: rgba(93,169,255,0.4);
-          box-shadow: 0 14px 32px rgba(0,0,0,0.45);
+          transform: translateY(-6px);
+          border-color: rgba(93,169,255,0.45);
+          box-shadow: 0 24px 50px rgba(0,0,0,0.5), 0 0 30px rgba(93,169,255,0.14);
         }
         .feature-icon {
-          width: 46px;
-          height: 46px;
-          min-width: 46px;
-          border-radius: 12px;
+          width: 50px;
+          height: 50px;
+          min-width: 50px;
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 20px;
+          margin-bottom: 30px;
         }
         .feature-icon.blue { background: rgba(93,169,255,0.12); color: #7cbaff; }
         .feature-icon.pink { background: rgba(255,95,162,0.12); color: #ff8fc0; }
         .feature-card h3 {
-          font-size: 17px;
-          line-height: 1.4;
-          margin-bottom: 12px;
+          font-size: 18.5px;
+          line-height: 1.38;
+          margin-bottom: 16px;
           font-weight: 700;
           color: #eef2fb;
+          letter-spacing: -0.01em;
         }
         .feature-card p {
-          font-size: 14px;
+          font-size: 14.5px;
           color: #9aa4bd;
-          line-height: 1.65;
+          line-height: 1.75;
           flex: 1;
         }
 
