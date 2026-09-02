@@ -376,7 +376,7 @@ function Features() {
     <section className="section">
       <div className="section-head center">
         <div className="eyebrow eyebrow-alt">CORE MODULES</div>
-        <h2>Five systems. One shield.</h2>
+        <h2>Six systems. One shield.</h2>
         <p>Every module below feeds the same intelligence engine and the same dashboard.</p>
       </div>
 
@@ -794,18 +794,37 @@ export default function App() {
         .float-desc { font-size: 11.5px; color: #9aa4bd; line-height: 1.4; }
 
         /* ---------- features ---------- */
-        .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 18px; }
+        .feature-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 22px;
+        }
+        @media (max-width: 960px) {
+          .feature-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        @media (max-width: 600px) {
+          .feature-grid {
+            grid-template-columns: 1fr;
+          }
+        }
         .feature-card {
           background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
-          border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 24px;
-          transition: transform 0.2s ease, border-color 0.2s ease;
+          border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 26px 24px;
+          display: flex; flex-direction: column;
+          transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        .feature-card:hover { transform: translateY(-4px); border-color: rgba(93,169,255,0.4); }
-        .feature-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+        .feature-card:hover {
+          transform: translateY(-4px);
+          border-color: rgba(93,169,255,0.4);
+          box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+        }
+        .feature-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
         .feature-icon.blue { background: rgba(93,169,255,0.12); color: #7cbaff; }
         .feature-icon.pink { background: rgba(255,95,162,0.12); color: #ff8fc0; }
-        .feature-card h3 { font-size: 16px; margin-bottom: 8px; }
-        .feature-card p { font-size: 13.5px; color: #9aa4bd; line-height: 1.6; }
+        .feature-card h3 { font-size: 17px; margin-bottom: 10px; font-weight: 700; color: #eef2fb; }
+        .feature-card p { font-size: 14px; color: #9aa4bd; line-height: 1.6; flex: 1; }
 
         /* ---------- dashboard mock ---------- */
         .dash-mock {
