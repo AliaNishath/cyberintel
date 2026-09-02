@@ -35,7 +35,8 @@ export async function signup(req, res) {
       existing.otpExpiresAt = otpExpiry();
       await existing.save();
 
-      await sendOtpEmail(existing.email, otpCode, "verify");
+      // Fire email in background so user gets response in milliseconds without hanging
+      sendOtpEmail(existing.email, otpCode, "verify").catch((e) => console.error("OTP email error:", e.message));
 
       return res.status(200).json({
         message: "Account verification code refreshed. Check your email (or terminal).",
@@ -63,7 +64,8 @@ export async function signup(req, res) {
       otpExpiresAt: otpExpiry(),
     });
 
-    await sendOtpEmail(user.email, otpCode, "verify");
+    // Fire email in background so user immediately gets the verification screen
+    sendOtpEmail(user.email, otpCode, "verify").catch((e) => console.error("OTP email error:", e.message));
 
     res.status(201).json({
       message: "Account created. Check your email for a verification code.",
@@ -271,7 +273,7 @@ export async function forgotPassword(req, res) {
     user.resetOtpExpiresAt = otpExpiry();
     await user.save();
 
-    await sendOtpEmail(user.email, otpCode, "reset");
+    sendOtpEmail(user.email, otpCode, "reset").catch((e) => console.error("Reset OTP error:", e.message));
     res.json({ message: "If that email exists, a reset code has been sent", userId: user._id });
   } catch (err) {
     console.error(err);

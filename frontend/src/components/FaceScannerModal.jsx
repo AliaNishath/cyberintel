@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as faceapi from "@vladmandic/face-api";
 import { ScanFace, X, CheckCircle2, AlertTriangle, ShieldCheck, RefreshCw, Camera } from "lucide-react";
 import API_BASE_URL from "../config/api.js";
@@ -8,8 +8,8 @@ let globalModelPromise = null;
 export function preloadFaceModels() {
   if (!globalModelPromise) {
     globalModelPromise = Promise.all([
-      faceapi.nets.ssdMobilenetv1.loadFromUri("/models"),
-      faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
+      faceapi.nets.tinyFaceDetector.loadFromUri("/models"),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri("/models"),
       faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
     ]);
   }
@@ -24,7 +24,7 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
 
   const [loadingModels, setLoadingModels] = useState(true);
   const [cameraActive, setCameraActive] = useState(false);
-  const [status, setStatus] = useState("Initializing neural networks...");
+  const [status, setStatus] = useState("Accessing front camera...");
   const [statusType, setStatusType] = useState("info"); // 'info' | 'scanning' | 'success' | 'error'
   const [matchedUser, setMatchedUser] = useState(null);
   const [errorMsg, setErrorMsg] = useState("");
@@ -43,39 +43,39 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
 
     async function init() {
       try {
-        setStatus("Accessing camera & biometric AI...");
+        setStatus("Accessing camera viewfinder...");
         setStatusType("info");
 
-        // Concurrent initialization: load models and start camera stream in parallel
-        const [models, stream] = await Promise.all([
-          preloadFaceModels(),
-          navigator.mediaDevices.getUserMedia({
-            video: {
-              width: { ideal: 480, max: 640 },
-              height: { ideal: 360, max: 480 },
-              facingMode: "user",
-            },
+        // 1. Immediately request camera stream so user sees their face in under 1s
+        let stream = null;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "user" },
             audio: false,
-          }),
-        ]);
+          });
+        } catch (camErr) {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        }
 
         if (!isMounted) {
           if (stream) stream.getTracks().forEach((t) => t.stop());
           return;
         }
 
-        setLoadingModels(false);
         streamRef.current = stream;
-
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          videoRef.current.onloadedmetadata = () => {
-            if (isMounted) {
-              setCameraActive(true);
-              startScanning();
-            }
-          };
+          videoRef.current.play().catch(() => {});
+          setCameraActive(true);
         }
+
+        // 2. Concurrently load lightweight AI models
+        setStatus("Loading lightweight biometric AI...");
+        await preloadFaceModels();
+
+        if (!isMounted) return;
+        setLoadingModels(false);
+        startScanning();
       } catch (err) {
         console.error("Camera/Model initialization failed:", err);
         if (isMounted) {
@@ -125,10 +125,10 @@ export default function FaceScannerModal({ mode = "identify", onSuccess, onClose
           canvas.height = video.videoHeight;
         }
 
-        // Run detection with optimized options
+        // Run detection with ultra-fast TinyFaceDetector
         const detection = await faceapi
-          .detectSingleFace(video, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }))
-          .withFaceLandmarks()
+          .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.4 }))
+          .withFaceLandmarks(true)
           .withFaceDescriptor();
 
         const ctx = canvas.getContext("2d");

@@ -124,6 +124,9 @@ function LoginView({ goto }) {
   const [showFaceModal, setShowFaceModal] = useState(false);
 
   useEffect(() => {
+    // Warm up the backend container immediately in background
+    fetch(`${API_BASE_URL}/health`).catch(() => {});
+    fetch(`${API_BASE_URL}/api/threats/scan-history`).catch(() => {});
     preloadFaceModels().catch(() => {});
   }, []);
 
@@ -315,7 +318,11 @@ function SignupView({ goto }) {
 
       goto("otp", { flow: "signup", userId: data.userId, email });
     } catch (err) {
-      setError(err.message);
+      if (err.message === "Failed to fetch") {
+        setError("Secure cloud server was asleep and is now waking up. Please tap 'Create Account' once more.");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
