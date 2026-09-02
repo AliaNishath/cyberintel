@@ -53,8 +53,8 @@ const FEATURES = [
   },
   {
     icon: ScanFace,
-    title: "Biometric WebAuthn & AI Face ID",
-    desc: "Face ID, fingerprint, and FIDO2 passkeys replacing passwords with cryptographic hardware tokens and neural biometrics.",
+    title: "Biometric WebAuthn & Passkey ID",
+    desc: "Face ID, fingerprint, and FIDO2 passkeys replacing passwords with genuine cryptographic passkeys and neural face recognition.",
   },
   {
     icon: Cpu,
@@ -67,14 +67,14 @@ const FEATURES = [
     desc: "Audit HTTP defense headers (HSTS, CSP, X-Frame-Options) and inspect SSL configurations with instant remediation code.",
   },
   {
-    icon: Globe,
-    title: "3D Global Threat Matrix",
-    desc: "Live spherical 3D visualizer calculating real-time attack trajectories and volumetric DDoS vectors across global security hubs at 60 FPS.",
+    icon: Radar,
+    title: "Threat Intelligence & Risk",
+    desc: "Correlated threat feeds turn raw signals into a ranked, actionable risk picture for your systems using a weighted mathematical scoring algorithm.",
   },
   {
-    icon: Zap,
-    title: "AI Cyber Duel Arena (Red vs Blue)",
-    desc: "Simulate autonomous offensive adversary tactics against defensive AI agents with dynamic MITRE ATT&CK kill-chain mapping.",
+    icon: Activity,
+    title: "Real-Time Monitoring & Alerts",
+    desc: "Live telemetry across every endpoint, with instant alerts and automated defensive incident response the moment an attack is detected.",
   },
 ];
 
@@ -798,36 +798,32 @@ export default function App() {
         /* ---------- features ---------- */
         .feature-grid {
           display: grid;
-          grid-template-columns: repeat(6, 1fr);
-          gap: 14px;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 24px;
+          max-width: 1140px;
+          margin: 0 auto;
           align-items: stretch;
         }
-        @media (max-width: 1220px) {
-          .feature-grid {
-            grid-template-columns: repeat(3, 1fr);
-            gap: 18px;
-          }
-        }
-        @media (max-width: 768px) {
+        @media (max-width: 960px) {
           .feature-grid {
             grid-template-columns: repeat(2, 1fr);
-            gap: 14px;
+            gap: 20px;
           }
         }
-        @media (max-width: 480px) {
+        @media (max-width: 580px) {
           .feature-grid {
             grid-template-columns: 1fr;
-            gap: 14px;
+            gap: 16px;
           }
         }
         .feature-card {
           background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01));
           border: 1px solid rgba(255,255,255,0.08);
           border-radius: 18px;
-          padding: 24px 16px;
+          padding: 28px 24px;
           display: flex;
           flex-direction: column;
-          min-height: 380px;
+          min-height: 270px;
           transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
         .feature-card:hover {
@@ -836,28 +832,28 @@ export default function App() {
           box-shadow: 0 14px 32px rgba(0,0,0,0.45);
         }
         .feature-icon {
-          width: 42px;
-          height: 42px;
-          min-width: 42px;
+          width: 46px;
+          height: 46px;
+          min-width: 46px;
           border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 18px;
+          margin-bottom: 20px;
         }
         .feature-icon.blue { background: rgba(93,169,255,0.12); color: #7cbaff; }
         .feature-icon.pink { background: rgba(255,95,162,0.12); color: #ff8fc0; }
         .feature-card h3 {
-          font-size: 15px;
-          line-height: 1.35;
+          font-size: 17px;
+          line-height: 1.4;
           margin-bottom: 12px;
           font-weight: 700;
           color: #eef2fb;
         }
         .feature-card p {
-          font-size: 12.5px;
+          font-size: 14px;
           color: #9aa4bd;
-          line-height: 1.6;
+          line-height: 1.65;
           flex: 1;
         }
 
